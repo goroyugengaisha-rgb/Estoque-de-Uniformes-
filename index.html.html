@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>制服在庫管理システム / Controle de Estoque de Uniformes</title>
+<style>
+  :root{
+    --navy:#1c3a56;
+    --navy-dark:#122840;
+    --amber:#c07a1e;
+    --green:#2f7a4f;
+    --red:#b23a3a;
+    --bg:#f6f4ee;
+    --card:#ffffff;
+    --border:#e2ded2;
+    --text:#23262b;
+    --text-soft:#6c7079;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    padding-bottom:60px;
+  }
+  header{
+    background:var(--navy);
+    background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0px,rgba(255,255,255,.03) 1px,transparent 1px,transparent 4px);
+    color:#fff;
+    padding:18px 16px 14px;
+  }
+  header h1{margin:0;font-size:1.5rem;font-weight:700;letter-spacing:.02em;}
+  header h2{margin:2px 0 0;font-size:.85rem;font-weight:400;color:#c9d6e3;}
+  .barra-status{
+    display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;
+    margin-top:12px;font-size:.82rem;color:#dbe4ee;
+  }
+  .ponto{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;background:#8a97a4;}
+  .ponto.ok{background:#5fbf7e;}
+  .ponto.erro{background:#e06a6a;}
+  .barra-status button, .usuario-atual button{
+    background:none;border:1px solid rgba(255,255,255,.4);color:#fff;
+    border-radius:5px;padding:3px 9px;font-size:.78rem;cursor:pointer;
+  }
+  .barra-status button:hover{background:rgba(255,255,255,.12);}
+  .seletor-modo{display:flex;gap:4px;}
+  .seletor-modo button.ativo{background:#fff;color:var(--navy);border-color:#fff;font-weight:700;}
+
+  .container{max-width:1300px;margin:0 auto;padding:0 16px;}
+
+  .painel-controle{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    margin-top:18px;position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:5;
+  }
+  .abas{display:flex;flex-wrap:wrap;gap:6px;}
+  .aba{
+    border:1px solid var(--border);background:#fff;color:var(--text-soft);
+    padding:7px 14px;border-radius:20px;font-size:.85rem;cursor:pointer;font-weight:600;
+  }
+  .aba.ativa{background:var(--navy);border-color:var(--navy);color:#fff;}
+  #busca{
+    flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--border);
+    border-radius:20px;font-size:.9rem;
+  }
+  .btn-historico{
+    border:1px solid var(--border);background:#fff;padding:8px 14px;border-radius:20px;
+    font-size:.85rem;cursor:pointer;font-weight:600;color:var(--navy);
+  }
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:6px;}
+
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:10px;
+    overflow:hidden;display:flex;flex-direction:column;
+  }
+  .card-cabecalho{
+    cursor:pointer;display:flex;flex-direction:column;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .card-cabecalho:hover .card-imagem{filter:brightness(0.97);}
+  .card-imagem{
+    height:190px;background:#fafaf7;display:flex;align-items:center;justify-content:center;
+    border-bottom:1px solid var(--border);position:relative;
+  }
+  .card-imagem img{max-width:100%;max-height:100%;object-fit:contain;}
+  .sem-imagem{color:#b7b2a4;font-size:.8rem;font-style:italic;padding:0 10px;text-align:center;}
+  .card-titulo-area{padding:10px 14px 8px;}
+  .card-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .titulo-jp{font-weight:700;font-size:1.15rem;line-height:1.3;}
+  .titulo-pt{font-size:.8rem;color:var(--text-soft);margin-top:1px;}
+  .total-produto{
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.78rem;
+    background:#eef2f6;color:var(--navy);border-radius:6px;padding:3px 7px;white-space:nowrap;
+  }
+  .preco{font-size:.8rem;color:var(--green);font-weight:600;margin:6px 0 0;}
+  .dica-toque{
+    font-size:.74rem;color:var(--text-soft);margin-top:6px;display:flex;align-items:center;gap:4px;
+  }
+  .dica-toque .seta{transition:transform .2s ease;display:inline-block;}
+  .card.aberto .dica-toque .seta{transform:rotate(180deg);}
+
+  .card-detalhe{
+    max-height:0;overflow:hidden;transition:max-height .25s ease;
+    padding:0 14px;border-top:1px solid transparent;
+  }
+  .card.aberto .card-detalhe{max-height:900px;border-top:1px solid var(--border);padding:8px 14px 14px;}
+
+  .cabecalho-tamanhos{
+    display:flex;justify-content:space-between;font-size:.72rem;color:var(--text-soft);
+    font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+    border-bottom:2px solid var(--border);padding-bottom:4px;
+  }
+  .linha-tamanho{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:7px 0;border-bottom:1px dashed #ece9df;
+  }
+  .linha-tamanho:last-child{border-bottom:none;}
+  .linha-tamanho.baixo .valor-estoque{color:var(--red);}
+  .linha-tamanho.baixo .etiqueta-tamanho{box-shadow:inset 0 0 0 1.5px var(--red);}
+
+  .etiqueta-tamanho{
+    position:relative;font-weight:700;font-size:.8rem;background:#eef1f5;color:var(--navy);
+    padding:3px 9px 3px 14px;border-radius:3px;min-width:34px;text-align:center;
+  }
+  .etiqueta-tamanho::before{
+    content:"";position:absolute;left:5px;top:50%;transform:translateY(-50%);
+    width:4px;height:4px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px var(--navy);
+  }
+
+  .tamanho-info{display:flex;align-items:center;gap:10px;}
+  .controles{display:flex;align-items:center;gap:5px;}
+  .valor-estoque{
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-weight:700;font-size:1rem;
+    min-width:30px;text-align:center;cursor:pointer;border-radius:4px;padding:2px 4px;
+  }
+  .valor-estoque:hover{background:#f1eee3;}
+  .valor-estoque input{
+    width:48px;font-family:inherit;font-size:1rem;font-weight:700;text-align:center;
+    border:1px solid var(--navy);border-radius:4px;padding:1px;
+  }
+  .input-passo{
+    width:38px;text-align:center;font-family:inherit;font-size:.82rem;
+    border:1px solid var(--border);border-radius:5px;padding:4px 2px;
+    -moz-appearance:textfield;
+  }
+  .input-passo::-webkit-inner-spin-button, .input-passo::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0;
+  }
+  .btn-passo{
+    width:28px;height:28px;border:none;border-radius:6px;color:#fff;font-size:1rem;
+    font-weight:700;cursor:pointer;line-height:1;flex-shrink:0;
+  }
+  .btn-passo:disabled{background:#cfcac0 !important;cursor:not-allowed;}
+  .btn-mais{background:var(--green);}
+  .btn-menos{background:var(--red);}
+
+  .oculto{display:none !important;}
+
+  /* ---- Modo de visualização forçado (Auto / PC / Celular) ---- */
+  body.modo-pc .grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));}
+  body.modo-pc .card-imagem{height:190px;}
+  body.modo-pc .painel-controle{flex-wrap:nowrap;}
+
+  body.modo-celular{max-width:480px;margin:0 auto;}
+  body.modo-celular .grid{grid-template-columns:1fr;}
+  body.modo-celular .card-imagem{height:150px;}
+  body.modo-celular .painel-controle{flex-direction:column;align-items:stretch;}
+  body.modo-celular #busca{width:100%;min-width:0;}
+  body.modo-celular .abas{justify-content:center;}
+
+  .painel-lateral{
+    position:fixed;top:0;right:0;height:100%;width:min(360px,100%);
+    background:#fff;box-shadow:-4px 0 18px rgba(0,0,0,.15);
+    transform:translateX(100%);transition:transform .25s ease;z-index:20;
+    display:flex;flex-direction:column;
+  }
+  .painel-lateral.aberto{transform:translateX(0);}
+  .painel-lateral-topo{
+    padding:14px 16px;border-bottom:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .painel-lateral-topo h3{margin:0;font-size:1rem;}
+  .painel-lateral-topo button{border:none;background:none;font-size:1.3rem;cursor:pointer;color:var(--text-soft);}
+  .lista-historico{overflow-y:auto;padding:8px 16px;flex:1;}
+  .item-historico{padding:9px 0;border-bottom:1px solid #f0eee6;font-size:.85rem;}
+  .item-historico .quando{color:var(--text-soft);font-size:.75rem;}
+  .fundo-escurecido{
+    position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:19;opacity:0;pointer-events:none;transition:opacity .2s;
+  }
+  .fundo-escurecido.ativo{opacity:1;pointer-events:auto;}
+
+  @media (max-width:480px){
+    .card-imagem{height:150px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>制服在庫管理システム</h1>
+  <h2>Controle de Estoque de Uniformes</h2>
+  <div class="barra-status">
+    <span><span class="ponto" id="pontoStatus"></span><span id="textoStatus">Carregando…</span></span>
+    <span class="usuario-atual">Usuário: <strong id="nomeUsuarioAtual">—</strong> <button id="btnTrocarNome">trocar</button></span>
+    <span class="seletor-modo" id="seletorModo">
+      <button data-modo="auto">Auto</button>
+      <button data-modo="pc">🖥️ PC</button>
+      <button data-modo="celular">📱 Celular</button>
+    </span>
+  </div>
+</header>
+
+<div class="container">
+  <div class="painel-controle">
+    <div class="abas" id="abas"></div>
+    <input type="text" id="busca" placeholder="Buscar uniforme… / 検索">
+    <button class="btn-historico" id="btnHistorico">🕒 Últimas alterações</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="fundo-escurecido" id="fundoEscurecido"></div>
+<div class="painel-lateral" id="painelHistorico">
+  <div class="painel-lateral-topo">
+    <h3>Últimas alterações</h3>
+    <button id="fecharHistorico">✕</button>
+  </div>
+  <div class="lista-historico" id="listaHistorico">Carregando…</div>
+</div>
+
+<script>
+/* =========================================================================
+   CONFIGURAÇÃO
+   ========================================================================= */
+const CONFIG = {
+  // Cole aqui a URL do seu Google Apps Script (termina em /exec)
+  scriptUrl: "COLE_AQUI_A_URL_DO_SEU_GOOGLE_APPS_SCRIPT",
+  intervaloAtualizacaoMs: 20000, // atualiza sozinho a cada 20s
+  estoqueBaixo: 2                // a partir de qual quantidade avisa "estoque baixo"
+};
+
+/* =========================================================================
+   CATÁLOGO DE PRODUTOS
+   Precisa ser IGUAL ao array `PRODUTOS` do Google Apps Script (mesmo `id`
+   e mesmos tamanhos). Para adicionar um uniforme novo: copie uma linha,
+   troque os campos, e rode de novo "inicializarPlanilha" no Apps Script.
+   ========================================================================= */
+const tamanhosRoupas = ['S','M','L','2L','3L','4L','5L','6L','7L'];
+const tamanhosBatas  = ['S','M','L','2L','3L','4L','5L','6L']; // 5L/6L adicionados
+const tamanhosSapatos = (function(){ const a=[]; for(let s=23;s<=30;s+=0.5) a.push(s.toFixed(1)); return a; })();
+
+const categorias = [
+  { id:'manga-curta',     nome:'Manga Curta' },
+  { id:'manga-comprida',  nome:'Manga Comprida / Calça' },
+  { id:'calcados',        nome:'Calçados' },
+  { id:'acessorios',      nome:'Acessórios' }
+];
+
+const produtos = [
+  { id:'mcc',       categoria:'manga-curta',    nome:'Manga Curta (Camisa)',        nomeJp:'半袖シャツ',       imagem:'manga-curta-camisa.jpg',      preco:'¥1.650', tamanhos:tamanhosRoupas },
+  { id:'mcb',       categoria:'manga-curta',    nome:'Manga Curta (Bluson)',        nomeJp:'半袖ブルゾン',     imagem:'manga-curta-bluson.jpg',      preco:'¥1.980', tamanhos:tamanhosRoupas },
+  { id:'mct',       categoria:'manga-curta',    nome:'Manga Curta (Bata/Smock)',    nomeJp:'半袖スモック',     imagem:'manga-curta-bata.jpg',        preco:'¥3.520', tamanhos:tamanhosBatas },
+  { id:'mccom',     categoria:'manga-comprida', nome:'Manga Comprida (Camisa)',     nomeJp:'長袖シャツ',       imagem:'manga-comprida-camisa.jpg',   preco:'¥1.815', tamanhos:tamanhosRoupas },
+  { id:'mcbom',     categoria:'manga-comprida', nome:'Manga Comprida (Bluson)',     nomeJp:'長袖ブルゾン',     imagem:'manga-comprida-bluson.jpg',   preco:'¥2.255', tamanhos:tamanhosRoupas },
+  { id:'mctom',     categoria:'manga-comprida', nome:'Manga Comprida (Bata/Smock)', nomeJp:'長袖スモック',     imagem:'manga-comprida-bata.jpg',     preco:'¥5.929', tamanhos:tamanhosBatas },
+  { id:'calca',     categoria:'manga-comprida', nome:'Calça',                       nomeJp:'ズボン',           imagem:'calca.jpg',                    preco:'¥1.815', tamanhos:tamanhosRoupas },
+  { id:'sapatoseg', categoria:'calcados',       nome:'Sapato de Segurança',         nomeJp:'安全靴',           imagem:'sapato-seguranca.jpg',         preco:'¥3.410', tamanhos:tamanhosSapatos },
+  { id:'sapatoant', categoria:'calcados',       nome:'Calçado Antiestático',        nomeJp:'静電靴',           imagem:'calcado-antiestatico.jpg',     preco:'¥3.784', tamanhos:tamanhosSapatos },
+  { id:'chapeu',    categoria:'acessorios',     nome:'Chapéu',                      nomeJp:'帽子',             imagem:'chapeu.jpg',                   preco:'¥715',   tamanhos:['F'] },
+  { id:'cracha',    categoria:'acessorios',     nome:'Crachá',                      nomeJp:'名札',             imagem:'cracha.jpg',                   preco:'¥330',   tamanhos:['--'] }
+];
+
+/* =========================================================================
+   ESTADO
+   ========================================================================= */
+let abaAtiva = 'todas';
+let sincronizando = false;
+
+/* =========================================================================
+   USUÁRIO (para saber quem alterou o quê)
+   ========================================================================= */
+function obterUsuario(){
+  let nome = localStorage.getItem('estoqueUniformesUsuario');
+  if(!nome){
+    nome = (prompt('Qual é o seu nome? (aparece no histórico de alterações)') || 'Anônimo').trim() || 'Anônimo';
+    localStorage.setItem('estoqueUniformesUsuario', nome);
+  }
+  return nome;
+}
+function trocarUsuario(){
+  const nome = (prompt('Digite seu nome:') || '').trim();
+  if(nome){
+    localStorage.setItem('estoqueUniformesUsuario', nome);
+    document.getElementById('nomeUsuarioAtual').textContent = nome;
+  }
+}
+
+/* =========================================================================
+   MODO DE VISUALIZAÇÃO (Automático / PC / Celular)
+   ========================================================================= */
+function aplicarModoVisual(modo){
+  document.body.classList.remove('modo-pc', 'modo-celular');
+  if(modo === 'pc') document.body.classList.add('modo-pc');
+  if(modo === 'celular') document.body.classList.add('modo-celular');
+  document.querySelectorAll('#seletorModo button').forEach(b => {
+    b.classList.toggle('ativo', b.dataset.modo === modo);
+  });
+  localStorage.setItem('estoqueUniformesModoVisual', modo);
+}
+
+function iniciarSeletorModo(){
+  const salvo = localStorage.getItem('estoqueUniformesModoVisual') || 'auto';
+  aplicarModoVisual(salvo);
+  document.getElementById('seletorModo').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if(btn) aplicarModoVisual(btn.dataset.modo);
+  });
+}
+
+/* =========================================================================
+   MONTAGEM DA INTERFACE
+   ========================================================================= */
+function montarAbas(){
+  const container = document.getElementById('abas');
+  const todas = document.createElement('button');
+  todas.className = 'aba ativa';
+  todas.textContent = 'Todos';
+  todas.dataset.cat = 'todas';
+  container.appendChild(todas);
+
+  categorias.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'aba';
+    btn.textContent = cat.nome;
+    btn.dataset.cat = cat.id;
+    container.appendChild(btn);
+  });
+
+  container.addEventListener('click', e => {
+    const btn = e.target.closest('.aba');
+    if(!btn) return;
+    abaAtiva = btn.dataset.cat;
+    container.querySelectorAll('.aba').forEach(b => b.classList.toggle('ativa', b === btn));
+    aplicarFiltros();
+  });
+}
+
+function montarCards(){
+  const grid = document.getElementById('grid');
+  produtos.forEach(prod => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.categoria = prod.categoria;
+    card.dataset.nome = (prod.nome + ' ' + prod.nomeJp).toLowerCase();
+
+    card.innerHTML = `
+      <div class="card-cabecalho">
+        <div class="card-imagem">
+          <img src="${prod.imagem}" alt="${prod.nomeJp}"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <div class="sem-imagem" style="display:none;">Imagem "${prod.imagem}" não encontrada nesta pasta</div>
+        </div>
+        <div class="card-titulo-area">
+          <div class="card-topo">
+            <div>
+              <div class="titulo-jp">${prod.nomeJp}</div>
+              <div class="titulo-pt">(${prod.nome})</div>
+            </div>
+            <div class="total-produto" data-total="${prod.id}">0 un.</div>
+          </div>
+          <div class="preco">${prod.preco}</div>
+          <div class="dica-toque"><span class="seta">▾</span> Toque na foto para ajustar o estoque</div>
+        </div>
+      </div>
+      <div class="card-detalhe">
+        <div class="cabecalho-tamanhos"><span>Tamanho</span><span>Estoque</span></div>
+        <div class="linhas-tamanho" id="linhas-${prod.id}"></div>
+      </div>
+    `;
+    grid.appendChild(card);
+
+    card.querySelector('.card-cabecalho').addEventListener('click', () => {
+      card.classList.toggle('aberto');
+    });
+
+    const container = card.querySelector(`#linhas-${prod.id}`);
+    prod.tamanhos.forEach(tam => {
+      const id = prod.id + '_' + tam;
+      const linha = document.createElement('div');
+      linha.className = 'linha-tamanho';
+      linha.dataset.id = id;
+      linha.innerHTML = `
+        <div class="tamanho-info">
+          <span class="etiqueta-tamanho">${tam}</span>
+          <span class="valor-estoque" title="Toque para digitar um valor exato">0</span>
+        </div>
+        <div class="controles">
+          <button class="btn-passo btn-menos" title="Retirar a quantidade ao lado">−</button>
+          <input type="number" class="input-passo" value="1" min="1" step="1" title="Quantidade movida a cada clique">
+          <button class="btn-passo btn-mais" title="Adicionar a quantidade ao lado">+</button>
+        </div>
+      `;
+      container.appendChild(linha);
+
+      const inputPasso = linha.querySelector('.input-passo');
+      const lerPasso = () => Math.max(1, parseInt(inputPasso.value, 10) || 1);
+
+      linha.querySelector('.btn-mais').addEventListener('click', () => alterarEstoque(prod, tam, 'adicionar', lerPasso(), linha));
+      linha.querySelector('.btn-menos').addEventListener('click', () => alterarEstoque(prod, tam, 'retirar', lerPasso(), linha));
+      // impede que o toque no campo de quantidade feche/abra o card sem querer
+      inputPasso.addEventListener('click', e => e.stopPropagation());
+      linha.querySelector('.valor-estoque').addEventListener('click', () => editarValorExato(prod, tam, linha));
+    });
+  });
+}
+
+/* =========================================================================
+   FILTROS (abas + busca)
+   ========================================================================= */
+function aplicarFiltros(){
+  const termo = document.getElementById('busca').value.trim().toLowerCase();
+  document.querySelectorAll('.card').forEach(card => {
+    const bateAba = (abaAtiva === 'todas') || (card.dataset.categoria === abaAtiva);
+    const bateBusca = !termo || card.dataset.nome.includes(termo);
+    card.classList.toggle('oculto', !(bateAba && bateBusca));
+  });
+}
+
+/* =========================================================================
+   SINCRONIZAÇÃO COM O GOOGLE SHEETS
+   ========================================================================= */
+function definirStatus(texto, tipo){
+  document.getElementById('textoStatus').textContent = texto;
+  const ponto = document.getElementById('pontoStatus');
+  ponto.className = 'ponto' + (tipo === 'ok' ? ' ok' : tipo === 'erro' ? ' erro' : '');
+}
+
+async function carregarEstoqueAtual(silencioso){
+  if(CONFIG.scriptUrl.indexOf('COLE_AQUI') !== -1){
+    definirStatus('⚠️ Configure a URL do Google Apps Script no código (CONFIG.scriptUrl)', 'erro');
+    return;
+  }
+  if(sincronizando) return;
+  sincronizando = true;
+  if(!silencioso) definirStatus('Sincronizando…');
+
+  try{
+    const resposta = await fetch(CONFIG.scriptUrl + '?tipo=estoque', { cache:'no-store' });
+    const dados = await resposta.json();
+
+    const totais = {};
+    dados.forEach(item => {
+      const linha = document.querySelector(`.linha-tamanho[data-id="${item.id}"]`);
+      if(linha){
+        linha.querySelector('.valor-estoque').textContent = item.quantidade;
+        linha.classList.toggle('baixo', item.quantidade <= CONFIG.estoqueBaixo);
+      }
+      const prodId = item.id.split('_')[0];
+      totais[prodId] = (totais[prodId] || 0) + item.quantidade;
+    });
+    Object.keys(totais).forEach(prodId => {
+      const el = document.querySelector(`[data-total="${prodId}"]`);
+      if(el) el.textContent = totais[prodId] + ' un.';
+    });
+
+    const agora = new Date();
+    definirStatus('Sincronizado às ' + agora.toLocaleTimeString('pt-BR'), 'ok');
+  }catch(erro){
+    console.error(erro);
+    definirStatus('❌ Falha ao conectar à planilha. Tentando de novo em instantes…', 'erro');
+  }finally{
+    sincronizando = false;
+  }
+}
+
+async function alterarEstoque(prod, tamanho, acao, quantidade, linha){
+  const id = prod.id + '_' + tamanho;
+  const valorEl = linha.querySelector('.valor-estoque');
+  const botoes = linha.querySelectorAll('.btn-passo');
+  botoes.forEach(b => b.disabled = true);
+
+  const atual = parseInt(valorEl.textContent, 10) || 0;
+  const novoValorOtimista = acao === 'adicionar' ? atual + quantidade : Math.max(0, atual - quantidade);
+  valorEl.textContent = novoValorOtimista;
+  linha.classList.toggle('baixo', novoValorOtimista <= CONFIG.estoqueBaixo);
+
+  await enviarAlteracao({ action: acao, id, produto: prod.nome, produtoJp: prod.nomeJp, tamanho, quantidade });
+  botoes.forEach(b => b.disabled = false);
+}
+
+function editarValorExato(prod, tamanho, linha){
+  const valorEl = linha.querySelector('.valor-estoque');
+  const atual = valorEl.textContent;
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '0';
+  input.value = atual;
+  valorEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  const confirmar = async () => {
+    const novo = Math.max(0, parseInt(input.value, 10) || 0);
+    const novoSpan = document.createElement('span');
+    novoSpan.className = 'valor-estoque';
+    novoSpan.title = 'Toque para digitar um valor exato';
+    novoSpan.textContent = novo;
+    input.replaceWith(novoSpan);
+    novoSpan.addEventListener('click', () => editarValorExato(prod, tamanho, linha));
+    linha.classList.toggle('baixo', novo <= CONFIG.estoqueBaixo);
+
+    const id = prod.id + '_' + tamanho;
+    await enviarAlteracao({ action:'definir', id, produto: prod.nome, produtoJp: prod.nomeJp, tamanho, quantidade: novo });
+  };
+  input.addEventListener('blur', confirmar);
+  input.addEventListener('keydown', e => { if(e.key === 'Enter') input.blur(); });
+}
+
+async function enviarAlteracao(dados){
+  dados.usuario = obterUsuario();
+  try{
+    // Apps Script não devolve cabeçalho CORS em POST, então usamos no-cors
+    // (não conseguimos ler a resposta, mas o envio funciona normalmente)
+    await fetch(CONFIG.scriptUrl, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{ 'Content-Type':'text/plain' },
+      body: JSON.stringify(dados)
+    });
+  }catch(erro){
+    console.error(erro);
+  }finally{
+    setTimeout(() => carregarEstoqueAtual(true), 1200);
+  }
+}
+
+/* =========================================================================
+   HISTÓRICO DE ALTERAÇÕES
+   ========================================================================= */
+const traducaoAcao = { adicionar:'adicionou', retirar:'retirou', definir:'ajustou para' };
+const mapaNomeParaJp = {};
+produtos.forEach(p => { mapaNomeParaJp[p.nome] = p.nomeJp; });
+
+async function carregarHistorico(){
+  const lista = document.getElementById('listaHistorico');
+  lista.textContent = 'Carregando…';
+  try{
+    const resposta = await fetch(CONFIG.scriptUrl + '?tipo=historico', { cache:'no-store' });
+    const itens = await resposta.json();
+    if(!itens.length){ lista.textContent = 'Nenhuma alteração registrada ainda.'; return; }
+
+    lista.innerHTML = '';
+    itens.forEach(it => {
+      const div = document.createElement('div');
+      div.className = 'item-historico';
+      const acaoTexto = traducaoAcao[it.acao] || it.acao;
+      const dataHora = it.dataHora ? new Date(it.dataHora).toLocaleString('pt-BR') : '';
+      const detalhe = it.acao === 'definir'
+        ? `${it.quantidadeNova}`
+        : `${it.quantidadeAnterior} → ${it.quantidadeNova}`;
+      const nomeJp = mapaNomeParaJp[it.produto] || '';
+      div.innerHTML = `
+        <div><strong>${it.usuario}</strong> ${acaoTexto} ${detalhe} — ${nomeJp} (${it.produto}), tam. ${it.tamanho}</div>
+        <div class="quando">${dataHora}</div>
+      `;
+      lista.appendChild(div);
+    });
+  }catch(erro){
+    lista.textContent = 'Não foi possível carregar o histórico.';
+  }
+}
+
+/* =========================================================================
+   INICIALIZAÇÃO
+   ========================================================================= */
+function iniciar(){
+  document.getElementById('nomeUsuarioAtual').textContent = obterUsuario();
+  document.getElementById('btnTrocarNome').addEventListener('click', trocarUsuario);
+  document.getElementById('busca').addEventListener('input', aplicarFiltros);
+  iniciarSeletorModo();
+
+  montarAbas();
+  montarCards();
+
+  const painel = document.getElementById('painelHistorico');
+  const fundo = document.getElementById('fundoEscurecido');
+  document.getElementById('btnHistorico').addEventListener('click', () => {
+    painel.classList.add('aberto'); fundo.classList.add('ativo'); carregarHistorico();
+  });
+  const fechar = () => { painel.classList.remove('aberto'); fundo.classList.remove('ativo'); };
+  document.getElementById('fecharHistorico').addEventListener('click', fechar);
+  fundo.addEventListener('click', fechar);
+
+  carregarEstoqueAtual();
+  setInterval(() => carregarEstoqueAtual(true), CONFIG.intervaloAtualizacaoMs);
+}
+
+document.addEventListener('DOMContentLoaded', iniciar);
+</script>
+</body>
+</html>
