@@ -64,10 +64,45 @@
     flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--border);
     border-radius:20px;font-size:.9rem;
   }
-  .btn-historico{
+  .btn-historico, .btn-solicitar, .btn-pendentes{
     border:1px solid var(--border);background:#fff;padding:8px 14px;border-radius:20px;
-    font-size:.85rem;cursor:pointer;font-weight:600;color:var(--navy);
+    font-size:.85rem;cursor:pointer;font-weight:600;color:var(--navy);position:relative;
   }
+  .btn-solicitar{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .badge-pendentes{
+    background:var(--red);color:#fff;border-radius:999px;font-size:.68rem;font-weight:700;
+    padding:1px 6px;margin-left:4px;
+  }
+  .rotulo-campo{display:block;font-size:.76rem;font-weight:700;color:var(--text-soft);margin:12px 0 4px;}
+  .modal-nome select, .modal-nome input[type="text"], .modal-nome input[type="number"]{
+    width:100%;padding:10px 12px;font-size:.95rem;border:2px solid var(--border);
+    border-radius:8px;box-sizing:border-box;font-family:inherit;
+  }
+  .modal-nome select:focus, .modal-nome input:focus{outline:none;border-color:var(--navy);}
+  .modal-grande{max-height:85vh;overflow-y:auto;}
+
+  .lista-pedidos{overflow-y:auto;padding:8px 16px;flex:1;}
+  .item-pedido{
+    border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;
+  }
+  .item-pedido-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .item-pedido-produto{font-weight:700;font-size:.92rem;}
+  .item-pedido-sub{font-size:.78rem;color:var(--text-soft);margin-top:2px;}
+  .status-badge{
+    font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap;
+  }
+  .status-badge.pendente{background:#fdf0dc;color:var(--amber);}
+  .status-badge.atendido{background:#e3f3e9;color:var(--green);}
+  .status-badge.fabrica{background:#e4edf5;color:var(--navy);}
+  .status-badge.cancelado{background:#f1eee3;color:var(--text-soft);}
+  .item-pedido-acoes{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+  .item-pedido-acoes button{
+    flex:1;min-width:85px;border:none;border-radius:6px;padding:7px 6px;font-size:.76rem;
+    font-weight:700;cursor:pointer;color:#fff;
+  }
+  .btn-pedido-atendido{background:var(--green);}
+  .btn-pedido-fabrica{background:var(--navy);}
+  .btn-pedido-cancelar{background:var(--red);}
 
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:6px;}
 
@@ -254,6 +289,8 @@
   <div class="painel-controle">
     <div class="abas" id="abas"></div>
     <input type="text" id="busca" placeholder="検索… / Buscar" title="Buscar uniforme">
+    <button class="btn-solicitar" id="btnSolicitar" title="Solicitar item para um funcionário">📋 依頼する</button>
+    <button class="btn-pendentes" id="btnPendentes" title="Pedidos pendentes">📥 依頼一覧<span class="badge-pendentes" id="badgePendentes" style="display:none;">0</span></button>
     <button class="btn-historico" id="btnHistorico" title="Últimas alterações">🕒 変更履歴</button>
   </div>
 
@@ -273,6 +310,32 @@
   </div>
 </div>
 
+<div class="modal-nome modal-grande" id="modalSolicitar">
+  <h3>制服を依頼する</h3>
+  <p class="modal-nome-sub">(Solicitar uniforme para um funcionário)</p>
+
+  <label class="rotulo-campo">商品 / Produto</label>
+  <select id="selectProdutoSolicitar"></select>
+
+  <label class="rotulo-campo">サイズ / Tamanho</label>
+  <select id="selectTamanhoSolicitar"></select>
+
+  <label class="rotulo-campo">数量 / Quantidade</label>
+  <input type="number" id="inputQuantidadeSolicitar" value="1" min="1">
+
+  <label class="rotulo-campo">従業員名 / Nome do funcionário (quem vai usar)</label>
+  <input type="text" id="inputFuncionarioSolicitar" placeholder="名前 / Nome do funcionário" autocomplete="off">
+
+  <p class="modal-nome-explicacao" id="solicitantePreview"></p>
+
+  <div class="modal-nome-erro" id="erroSolicitar">⚠️ 必要項目を入力してください。 / Preencha o tamanho e o nome do funcionário.</div>
+
+  <div class="modal-nome-botoes">
+    <button id="btnCancelarSolicitar" class="btn-modal-secundario" title="Cancelar">キャンセル</button>
+    <button id="btnEnviarSolicitar" class="btn-modal-primario" title="Enviar pedido">送信 / Enviar</button>
+  </div>
+</div>
+
 <div class="fundo-escurecido" id="fundoEscurecido"></div>
 <div class="painel-lateral" id="painelHistorico">
   <div class="painel-lateral-topo">
@@ -280,6 +343,14 @@
     <button id="fecharHistorico">✕</button>
   </div>
   <div class="lista-historico" id="listaHistorico">読み込み中…</div>
+</div>
+
+<div class="painel-lateral" id="painelPedidos">
+  <div class="painel-lateral-topo">
+    <h3 title="Pedidos de uniforme">依頼一覧</h3>
+    <button id="fecharPedidos">✕</button>
+  </div>
+  <div class="lista-pedidos" id="listaPedidos">読み込み中…</div>
 </div>
 
 <script>
@@ -672,6 +743,186 @@ async function carregarHistorico(){
 }
 
 /* =========================================================================
+   SOLICITAÇÃO DE UNIFORMES (pedido do tantousha em nome de um funcionário)
+   ========================================================================= */
+const traducaoStatus = {
+  'Pendente': { texto: 'ステータス：保留中', classe: 'pendente' },
+  'Atendido': { texto: 'ステータス：対応済み', classe: 'atendido' },
+  'Pedido à fábrica': { texto: 'ステータス：工場へ発注', classe: 'fabrica' },
+  'Cancelado': { texto: 'ステータス：キャンセル済み', classe: 'cancelado' }
+};
+
+function popularSelectProdutoSolicitar(){
+  const select = document.getElementById('selectProdutoSolicitar');
+  select.innerHTML = produtos.map(p => `<option value="${p.id}">${p.nomeJp}（${p.nome}）</option>`).join('');
+  popularSelectTamanhoSolicitar();
+}
+
+function popularSelectTamanhoSolicitar(){
+  const produtoId = document.getElementById('selectProdutoSolicitar').value;
+  const prod = produtos.find(p => p.id === produtoId) || produtos[0];
+  const select = document.getElementById('selectTamanhoSolicitar');
+  select.innerHTML = prod.tamanhos.map(t => `<option value="${t}">${t}</option>`).join('');
+}
+
+function abrirModalSolicitar(){
+  document.getElementById('selectProdutoSolicitar').value = produtos[0].id;
+  popularSelectTamanhoSolicitar();
+  document.getElementById('inputQuantidadeSolicitar').value = 1;
+  document.getElementById('inputFuncionarioSolicitar').value = '';
+  document.getElementById('solicitantePreview').textContent = '依頼者 / Solicitante: ' + obterUsuario();
+  document.getElementById('erroSolicitar').classList.remove('visivel');
+
+  document.getElementById('modalSolicitar').classList.add('aberto');
+  document.getElementById('fundoEscurecido').classList.add('ativo');
+}
+
+function fecharModalSolicitar(){
+  document.getElementById('modalSolicitar').classList.remove('aberto');
+  document.getElementById('fundoEscurecido').classList.remove('ativo');
+}
+
+async function enviarSolicitacao(){
+  const produtoId = document.getElementById('selectProdutoSolicitar').value;
+  const tamanho = document.getElementById('selectTamanhoSolicitar').value;
+  const quantidade = Math.max(1, parseInt(document.getElementById('inputQuantidadeSolicitar').value, 10) || 1);
+  const funcionario = document.getElementById('inputFuncionarioSolicitar').value.trim();
+  const erro = document.getElementById('erroSolicitar');
+
+  if(!funcionario){
+    erro.classList.add('visivel');
+    document.getElementById('inputFuncionarioSolicitar').focus();
+    return;
+  }
+  erro.classList.remove('visivel');
+
+  const prod = produtos.find(p => p.id === produtoId);
+  const btn = document.getElementById('btnEnviarSolicitar');
+  btn.disabled = true;
+
+  try{
+    await fetch(CONFIG.scriptUrl, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{ 'Content-Type':'text/plain' },
+      body: JSON.stringify({
+        action:'solicitar',
+        solicitante: obterUsuario(),
+        funcionario,
+        produtoId,
+        produto: prod.nome,
+        produtoJp: prod.nomeJp,
+        tamanho,
+        quantidade
+      })
+    });
+  }catch(erroEnvio){
+    console.error(erroEnvio);
+  }finally{
+    btn.disabled = false;
+    fecharModalSolicitar();
+    setTimeout(carregarPedidos, 1000);
+  }
+}
+
+function abrirPainelPedidos(){
+  document.getElementById('painelPedidos').classList.add('aberto');
+  document.getElementById('fundoEscurecido').classList.add('ativo');
+  carregarPedidos();
+}
+function fecharPainelPedidos(){
+  document.getElementById('painelPedidos').classList.remove('aberto');
+  document.getElementById('fundoEscurecido').classList.remove('ativo');
+}
+
+async function carregarPedidos(){
+  try{
+    const resposta = await fetch(CONFIG.scriptUrl + '?tipo=solicitacoes', { cache:'no-store' });
+    const pedidos = await resposta.json();
+
+    const pendentes = pedidos.filter(p => p.status === 'Pendente');
+    const resolvidos = pedidos.filter(p => p.status !== 'Pendente').slice(0, 10);
+
+    const badge = document.getElementById('badgePendentes');
+    if(pendentes.length > 0){ badge.textContent = pendentes.length; badge.style.display = 'inline-block'; }
+    else { badge.style.display = 'none'; }
+
+    const lista = document.getElementById('listaPedidos');
+    lista.innerHTML = '';
+
+    if(pedidos.length === 0){
+      lista.textContent = 'まだ依頼がありません。 (Nenhum pedido ainda.)';
+      return;
+    }
+
+    pendentes.forEach(p => lista.appendChild(criarItemPedido(p, true)));
+    if(resolvidos.length > 0){
+      const titulo = document.createElement('div');
+      titulo.className = 'modal-nome-sub';
+      titulo.style.margin = '14px 0 8px';
+      titulo.textContent = '最近対応済み / Resolvidos recentemente';
+      lista.appendChild(titulo);
+      resolvidos.forEach(p => lista.appendChild(criarItemPedido(p, false)));
+    }
+  }catch(erro){
+    document.getElementById('listaPedidos').textContent = '依頼を読み込めませんでした。 (Não foi possível carregar os pedidos.)';
+  }
+}
+
+function criarItemPedido(p, comAcoes){
+  const div = document.createElement('div');
+  div.className = 'item-pedido';
+  const st = traducaoStatus[p.status] || { texto: p.status, classe: '' };
+  const dataHora = p.dataSolicitacao ? new Date(p.dataSolicitacao).toLocaleString('pt-BR') : '';
+
+  div.innerHTML = `
+    <div class="item-pedido-topo">
+      <div>
+        <div class="item-pedido-produto">${p.produtoJp}（${p.produto}）・${p.tamanho} × ${p.quantidade}</div>
+        <div class="item-pedido-sub">従業員 / Funcionário: <strong>${p.funcionario}</strong></div>
+        <div class="item-pedido-sub">依頼者 / Solicitante: ${p.solicitante} — ${dataHora}</div>
+      </div>
+      <span class="status-badge ${st.classe}" title="${p.status}">${st.texto}</span>
+    </div>
+  `;
+
+  if(comAcoes){
+    const acoes = document.createElement('div');
+    acoes.className = 'item-pedido-acoes';
+    acoes.innerHTML = `
+      <button class="btn-pedido-atendido" title="Atendido (desconta do estoque)">✅ 対応済み</button>
+      <button class="btn-pedido-fabrica" title="Pedido à fábrica (não desconta do estoque)">🏭 工場へ</button>
+      <button class="btn-pedido-cancelar" title="Cancelar pedido">❌ 取消</button>
+    `;
+    acoes.querySelector('.btn-pedido-atendido').addEventListener('click', () => atualizarStatusPedido(p.id, 'Atendido', acoes));
+    acoes.querySelector('.btn-pedido-fabrica').addEventListener('click', () => atualizarStatusPedido(p.id, 'Pedido à fábrica', acoes));
+    acoes.querySelector('.btn-pedido-cancelar').addEventListener('click', () => atualizarStatusPedido(p.id, 'Cancelado', acoes));
+    div.appendChild(acoes);
+  }
+
+  return div;
+}
+
+async function atualizarStatusPedido(id, novoStatus, acoesEl){
+  acoesEl.querySelectorAll('button').forEach(b => b.disabled = true);
+  try{
+    await fetch(CONFIG.scriptUrl, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{ 'Content-Type':'text/plain' },
+      body: JSON.stringify({ action:'atualizarSolicitacao', id, novoStatus, usuario: obterUsuario() })
+    });
+  }catch(erro){
+    console.error(erro);
+  }finally{
+    setTimeout(() => {
+      carregarPedidos();
+      if(novoStatus === 'Atendido') carregarEstoqueAtual(true);
+    }, 1200);
+  }
+}
+
+/* =========================================================================
    INICIALIZAÇÃO
    ========================================================================= */
 function iniciar(){
@@ -703,12 +954,27 @@ function iniciar(){
   document.getElementById('btnHistorico').addEventListener('click', () => {
     painel.classList.add('aberto'); fundo.classList.add('ativo'); carregarHistorico();
   });
-  const fechar = () => { painel.classList.remove('aberto'); fundo.classList.remove('ativo'); };
+  const fechar = () => {
+    painel.classList.remove('aberto');
+    document.getElementById('painelPedidos').classList.remove('aberto');
+    document.getElementById('modalSolicitar').classList.remove('aberto');
+    fundo.classList.remove('ativo');
+  };
   document.getElementById('fecharHistorico').addEventListener('click', fechar);
   fundo.addEventListener('click', fechar);
 
+  popularSelectProdutoSolicitar();
+  document.getElementById('selectProdutoSolicitar').addEventListener('change', popularSelectTamanhoSolicitar);
+  document.getElementById('btnSolicitar').addEventListener('click', abrirModalSolicitar);
+  document.getElementById('btnCancelarSolicitar').addEventListener('click', fecharModalSolicitar);
+  document.getElementById('btnEnviarSolicitar').addEventListener('click', enviarSolicitacao);
+
+  document.getElementById('btnPendentes').addEventListener('click', abrirPainelPedidos);
+  document.getElementById('fecharPedidos').addEventListener('click', fecharPainelPedidos);
+
   carregarEstoqueAtual();
-  setInterval(() => carregarEstoqueAtual(true), CONFIG.intervaloAtualizacaoMs);
+  carregarPedidos();
+  setInterval(() => { carregarEstoqueAtual(true); carregarPedidos(); }, CONFIG.intervaloAtualizacaoMs);
 }
 
 document.addEventListener('DOMContentLoaded', iniciar);
