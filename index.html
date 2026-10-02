@@ -108,29 +108,39 @@
   .card.aberto .card-detalhe{max-height:900px;border-top:1px solid var(--border);padding:8px 14px 14px;}
 
   .cabecalho-tamanhos{
-    display:flex;justify-content:space-between;font-size:.72rem;color:var(--text-soft);
+    display:flex;align-items:center;font-size:.68rem;color:var(--text-soft);
     font-weight:700;text-transform:uppercase;letter-spacing:.03em;
     border-bottom:2px solid var(--border);padding-bottom:4px;
   }
+  .cabecalho-tamanhos .col-tamanho{flex:0 0 52px;}
+  .cabecalho-tamanhos .col-estoque{flex:0 0 56px;text-align:center;}
+  .cabecalho-tamanhos .col-ajuste{flex:1;text-align:right;}
   .linha-tamanho{
-    display:flex;justify-content:space-between;align-items:center;
+    display:flex;align-items:center;
     padding:7px 0;border-bottom:1px dashed #ece9df;
   }
   .linha-tamanho:last-child{border-bottom:none;}
-  .linha-tamanho.baixo .valor-estoque{color:var(--red);}
-  .linha-tamanho.baixo .etiqueta-tamanho{box-shadow:inset 0 0 0 1.5px var(--red);}
+
+  /* Sem estoque (0) = vermelho | Estoque baixo = laranja | Estoque ok = verde */
+  .linha-tamanho.sem-estoque .valor-estoque{color:var(--red);}
+  .linha-tamanho.sem-estoque .etiqueta-tamanho{box-shadow:inset 0 0 0 1.5px var(--red);}
+  .linha-tamanho.estoque-baixo .valor-estoque{color:var(--amber);}
+  .linha-tamanho.estoque-baixo .etiqueta-tamanho{box-shadow:inset 0 0 0 1.5px var(--amber);}
+  .linha-tamanho.estoque-ok .valor-estoque{color:var(--green);}
+  .linha-tamanho.estoque-ok .etiqueta-tamanho{box-shadow:inset 0 0 0 1.5px var(--green);}
 
   .etiqueta-tamanho{
     position:relative;font-weight:700;font-size:.8rem;background:#eef1f5;color:var(--navy);
-    padding:3px 9px 3px 14px;border-radius:3px;min-width:34px;text-align:center;
+    padding:3px 9px 3px 14px;border-radius:3px;text-align:center;
+    flex:0 0 52px;
   }
   .etiqueta-tamanho::before{
     content:"";position:absolute;left:5px;top:50%;transform:translateY(-50%);
     width:4px;height:4px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px var(--navy);
   }
 
-  .tamanho-info{display:flex;align-items:center;gap:10px;}
-  .controles{display:flex;align-items:center;gap:5px;}
+  .valor-estoque-col{flex:0 0 56px;text-align:center;}
+  .controles{display:flex;align-items:center;gap:5px;flex:1;justify-content:flex-end;}
   .valor-estoque{
     font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-weight:700;font-size:1rem;
     min-width:30px;text-align:center;cursor:pointer;border-radius:4px;padding:2px 4px;
@@ -191,6 +201,34 @@
   }
   .fundo-escurecido.ativo{opacity:1;pointer-events:auto;}
 
+  .modal-nome{
+    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);
+    background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.25);
+    width:min(360px,90vw);padding:22px 20px;z-index:31;
+    opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;
+  }
+  .modal-nome.aberto{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1);}
+  .modal-nome h3{margin:0 0 2px;font-size:1.15rem;color:var(--navy);}
+  .modal-nome-sub{margin:0 0 10px;font-size:.82rem;color:var(--text-soft);}
+  .modal-nome-explicacao{margin:0 0 14px;font-size:.82rem;color:var(--text-soft);line-height:1.4;}
+  #inputNomeUsuario{
+    width:100%;padding:12px 14px;font-size:1.05rem;border:2px solid var(--border);
+    border-radius:8px;box-sizing:border-box;
+  }
+  #inputNomeUsuario:focus{outline:none;border-color:var(--navy);}
+  #inputNomeUsuario.campo-invalido{border-color:var(--red);}
+  .modal-nome-erro{
+    display:none;color:var(--red);font-size:.82rem;margin-top:8px;font-weight:600;
+  }
+  .modal-nome-erro.visivel{display:block;}
+  .modal-nome-botoes{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+  .btn-modal-primario, .btn-modal-secundario{
+    padding:10px 18px;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;border:none;
+  }
+  .btn-modal-primario{background:var(--navy);color:#fff;}
+  .btn-modal-secundario{background:#f1eee3;color:var(--text);}
+  #fundoNome{z-index:30;}
+
   @media (max-width:480px){
     .card-imagem{height:150px;}
   }
@@ -202,12 +240,12 @@
   <h1>制服在庫管理システム</h1>
   <h2>Controle de Estoque de Uniformes</h2>
   <div class="barra-status">
-    <span><span class="ponto" id="pontoStatus"></span><span id="textoStatus">Carregando…</span></span>
-    <span class="usuario-atual">Usuário: <strong id="nomeUsuarioAtual">—</strong> <button id="btnTrocarNome">trocar</button></span>
+    <span><span class="ponto" id="pontoStatus"></span><span id="textoStatus" title="Carregando…">読み込み中…</span></span>
+    <span class="usuario-atual" title="Usuário">ユーザー: <strong id="nomeUsuarioAtual">—</strong> <button id="btnTrocarNome" title="Trocar nome">変更</button></span>
     <span class="seletor-modo" id="seletorModo">
-      <button data-modo="auto">Auto</button>
-      <button data-modo="pc">🖥️ PC</button>
-      <button data-modo="celular">📱 Celular</button>
+      <button data-modo="auto" title="Automático">自動</button>
+      <button data-modo="pc" title="PC">🖥️ PC</button>
+      <button data-modo="celular" title="Celular">📱 スマホ</button>
     </span>
   </div>
 </header>
@@ -215,20 +253,33 @@
 <div class="container">
   <div class="painel-controle">
     <div class="abas" id="abas"></div>
-    <input type="text" id="busca" placeholder="Buscar uniforme… / 検索">
-    <button class="btn-historico" id="btnHistorico">🕒 Últimas alterações</button>
+    <input type="text" id="busca" placeholder="検索… / Buscar" title="Buscar uniforme">
+    <button class="btn-historico" id="btnHistorico" title="Últimas alterações">🕒 変更履歴</button>
   </div>
 
   <div class="grid" id="grid"></div>
 </div>
 
+<div class="fundo-escurecido" id="fundoNome"></div>
+<div class="modal-nome" id="modalNome">
+  <h3>お名前を入力してください</h3>
+  <p class="modal-nome-sub">(Digite seu nome)</p>
+  <p class="modal-nome-explicacao">変更履歴に表示されます / Isso aparece no histórico de alterações, para sabermos quem mexeu no estoque.</p>
+  <input type="text" id="inputNomeUsuario" placeholder="名前 / Nome" autocomplete="off">
+  <div class="modal-nome-erro" id="erroNomeUsuario">⚠️ 名前を入力してください。 / Por favor, digite um nome antes de continuar.</div>
+  <div class="modal-nome-botoes">
+    <button id="btnCancelarNome" class="btn-modal-secundario" title="Cancelar">キャンセル</button>
+    <button id="btnConfirmarNome" class="btn-modal-primario" title="Confirmar">確認 / Confirmar</button>
+  </div>
+</div>
+
 <div class="fundo-escurecido" id="fundoEscurecido"></div>
 <div class="painel-lateral" id="painelHistorico">
   <div class="painel-lateral-topo">
-    <h3>Últimas alterações</h3>
+    <h3 title="Últimas alterações">変更履歴</h3>
     <button id="fecharHistorico">✕</button>
   </div>
-  <div class="lista-historico" id="listaHistorico">Carregando…</div>
+  <div class="lista-historico" id="listaHistorico">読み込み中…</div>
 </div>
 
 <script>
@@ -237,7 +288,7 @@
    ========================================================================= */
 const CONFIG = {
   // Cole aqui a URL do seu Google Apps Script (termina em /exec)
-  scriptUrl: "https://script.google.com/macros/s/AKfycbypQzaGVn6_ynz0CZvov6t_RRF6KzFx-R2RF1AWJu1AlMX7XNf2BRvrKysu-qtvjxFd/exec",
+  scriptUrl: "COLE_AQUI_A_URL_DO_SEU_GOOGLE_APPS_SCRIPT",
   intervaloAtualizacaoMs: 20000, // atualiza sozinho a cada 20s
   estoqueBaixo: 2                // a partir de qual quantidade avisa "estoque baixo"
 };
@@ -253,10 +304,10 @@ const tamanhosBatas  = ['S','M','L','2L','3L','4L','5L','6L']; // 5L/6L adiciona
 const tamanhosSapatos = (function(){ const a=[]; for(let s=23;s<=30;s+=0.5) a.push(s.toFixed(1)); return a; })();
 
 const categorias = [
-  { id:'manga-curta',     nome:'Manga Curta' },
-  { id:'manga-comprida',  nome:'Manga Comprida / Calça' },
-  { id:'calcados',        nome:'Calçados' },
-  { id:'acessorios',      nome:'Acessórios' }
+  { id:'manga-curta',     nome:'半袖', titulo:'Manga Curta' },
+  { id:'manga-comprida',  nome:'長袖・ズボン', titulo:'Manga Comprida / Calça' },
+  { id:'calcados',        nome:'靴', titulo:'Calçados' },
+  { id:'acessorios',      nome:'アクセサリー', titulo:'Acessórios' }
 ];
 
 const produtos = [
@@ -283,19 +334,51 @@ let sincronizando = false;
    USUÁRIO (para saber quem alterou o quê)
    ========================================================================= */
 function obterUsuario(){
-  let nome = localStorage.getItem('estoqueUniformesUsuario');
-  if(!nome){
-    nome = (prompt('Qual é o seu nome? (aparece no histórico de alterações)') || 'Anônimo').trim() || 'Anônimo';
-    localStorage.setItem('estoqueUniformesUsuario', nome);
-  }
-  return nome;
+  return localStorage.getItem('estoqueUniformesUsuario') || 'Anônimo';
 }
-function trocarUsuario(){
-  const nome = (prompt('Digite seu nome:') || '').trim();
-  if(nome){
-    localStorage.setItem('estoqueUniformesUsuario', nome);
-    document.getElementById('nomeUsuarioAtual').textContent = nome;
+
+function abrirModalNome(obrigatorio, valorAtual){
+  const modal = document.getElementById('modalNome');
+  const fundo = document.getElementById('fundoNome');
+  const input = document.getElementById('inputNomeUsuario');
+  const erro = document.getElementById('erroNomeUsuario');
+  const btnCancelar = document.getElementById('btnCancelarNome');
+
+  input.value = valorAtual || '';
+  input.classList.remove('campo-invalido');
+  erro.classList.remove('visivel');
+  btnCancelar.style.display = obrigatorio ? 'none' : 'inline-block';
+  modal.classList.add('aberto');
+  fundo.classList.add('ativo');
+  setTimeout(() => input.focus(), 100);
+}
+
+function fecharModalNome(){
+  document.getElementById('modalNome').classList.remove('aberto');
+  document.getElementById('fundoNome').classList.remove('ativo');
+}
+
+function confirmarNome(){
+  const input = document.getElementById('inputNomeUsuario');
+  const erro = document.getElementById('erroNomeUsuario');
+  const nome = input.value.trim();
+  if(!nome){
+    erro.classList.add('visivel');
+    input.classList.add('campo-invalido');
+    input.focus();
+    return;
   }
+  localStorage.setItem('estoqueUniformesUsuario', nome);
+  document.getElementById('nomeUsuarioAtual').textContent = nome;
+  fecharModalNome();
+}
+
+function cancelarNome(){
+  fecharModalNome();
+}
+
+function trocarUsuario(){
+  abrirModalNome(false, obterUsuario());
 }
 
 /* =========================================================================
@@ -327,7 +410,8 @@ function montarAbas(){
   const container = document.getElementById('abas');
   const todas = document.createElement('button');
   todas.className = 'aba ativa';
-  todas.textContent = 'Todos';
+  todas.textContent = 'すべて';
+  todas.title = 'Todos';
   todas.dataset.cat = 'todas';
   container.appendChild(todas);
 
@@ -335,6 +419,7 @@ function montarAbas(){
     const btn = document.createElement('button');
     btn.className = 'aba';
     btn.textContent = cat.nome;
+    btn.title = cat.titulo;
     btn.dataset.cat = cat.id;
     container.appendChild(btn);
   });
@@ -372,11 +457,15 @@ function montarCards(){
             <div class="total-produto" data-total="${prod.id}">0 un.</div>
           </div>
           <div class="preco">${prod.preco}</div>
-          <div class="dica-toque"><span class="seta">▾</span> Toque na foto para ajustar o estoque</div>
+          <div class="dica-toque" title="Toque na foto para ajustar o estoque"><span class="seta">▾</span> タップして在庫を調整</div>
         </div>
       </div>
       <div class="card-detalhe">
-        <div class="cabecalho-tamanhos"><span>Tamanho</span><span>Estoque</span></div>
+        <div class="cabecalho-tamanhos">
+          <span class="col-tamanho" title="Tamanho">サイズ</span>
+          <span class="col-estoque" title="Estoque atual">在庫数</span>
+          <span class="col-ajuste" title="Ajustar quantidade">調整</span>
+        </div>
         <div class="linhas-tamanho" id="linhas-${prod.id}"></div>
       </div>
     `;
@@ -393,10 +482,8 @@ function montarCards(){
       linha.className = 'linha-tamanho';
       linha.dataset.id = id;
       linha.innerHTML = `
-        <div class="tamanho-info">
-          <span class="etiqueta-tamanho">${tam}</span>
-          <span class="valor-estoque" title="Toque para digitar um valor exato">0</span>
-        </div>
+        <span class="etiqueta-tamanho">${tam}</span>
+        <span class="valor-estoque-col"><span class="valor-estoque" title="Toque para digitar um valor exato">0</span></span>
         <div class="controles">
           <button class="btn-passo btn-menos" title="Retirar a quantidade ao lado">−</button>
           <input type="number" class="input-passo" value="1" min="1" step="1" title="Quantidade movida a cada clique">
@@ -432,6 +519,17 @@ function aplicarFiltros(){
 /* =========================================================================
    SINCRONIZAÇÃO COM O GOOGLE SHEETS
    ========================================================================= */
+function aplicarNivelEstoque(linha, quantidade){
+  linha.classList.remove('sem-estoque', 'estoque-baixo', 'estoque-ok');
+  if(quantidade <= 0){
+    linha.classList.add('sem-estoque');
+  }else if(quantidade <= CONFIG.estoqueBaixo){
+    linha.classList.add('estoque-baixo');
+  }else{
+    linha.classList.add('estoque-ok');
+  }
+}
+
 function definirStatus(texto, tipo){
   document.getElementById('textoStatus').textContent = texto;
   const ponto = document.getElementById('pontoStatus');
@@ -456,7 +554,7 @@ async function carregarEstoqueAtual(silencioso){
       const linha = document.querySelector(`.linha-tamanho[data-id="${item.id}"]`);
       if(linha){
         linha.querySelector('.valor-estoque').textContent = item.quantidade;
-        linha.classList.toggle('baixo', item.quantidade <= CONFIG.estoqueBaixo);
+        aplicarNivelEstoque(linha, item.quantidade);
       }
       const prodId = item.id.split('_')[0];
       totais[prodId] = (totais[prodId] || 0) + item.quantidade;
@@ -485,7 +583,7 @@ async function alterarEstoque(prod, tamanho, acao, quantidade, linha){
   const atual = parseInt(valorEl.textContent, 10) || 0;
   const novoValorOtimista = acao === 'adicionar' ? atual + quantidade : Math.max(0, atual - quantidade);
   valorEl.textContent = novoValorOtimista;
-  linha.classList.toggle('baixo', novoValorOtimista <= CONFIG.estoqueBaixo);
+  aplicarNivelEstoque(linha, novoValorOtimista);
 
   await enviarAlteracao({ action: acao, id, produto: prod.nome, produtoJp: prod.nomeJp, tamanho, quantidade });
   botoes.forEach(b => b.disabled = false);
@@ -510,7 +608,7 @@ function editarValorExato(prod, tamanho, linha){
     novoSpan.textContent = novo;
     input.replaceWith(novoSpan);
     novoSpan.addEventListener('click', () => editarValorExato(prod, tamanho, linha));
-    linha.classList.toggle('baixo', novo <= CONFIG.estoqueBaixo);
+    aplicarNivelEstoque(linha, novo);
 
     const id = prod.id + '_' + tamanho;
     await enviarAlteracao({ action:'definir', id, produto: prod.nome, produtoJp: prod.nomeJp, tamanho, quantidade: novo });
@@ -546,11 +644,11 @@ produtos.forEach(p => { mapaNomeParaJp[p.nome] = p.nomeJp; });
 
 async function carregarHistorico(){
   const lista = document.getElementById('listaHistorico');
-  lista.textContent = 'Carregando…';
+  lista.textContent = '読み込み中…';
   try{
     const resposta = await fetch(CONFIG.scriptUrl + '?tipo=historico', { cache:'no-store' });
     const itens = await resposta.json();
-    if(!itens.length){ lista.textContent = 'Nenhuma alteração registrada ainda.'; return; }
+    if(!itens.length){ lista.textContent = 'まだ変更履歴がありません。'; return; }
 
     lista.innerHTML = '';
     itens.forEach(it => {
@@ -569,7 +667,7 @@ async function carregarHistorico(){
       lista.appendChild(div);
     });
   }catch(erro){
-    lista.textContent = 'Não foi possível carregar o histórico.';
+    lista.textContent = '履歴を読み込めませんでした。';
   }
 }
 
@@ -577,10 +675,25 @@ async function carregarHistorico(){
    INICIALIZAÇÃO
    ========================================================================= */
 function iniciar(){
-  document.getElementById('nomeUsuarioAtual').textContent = obterUsuario();
   document.getElementById('btnTrocarNome').addEventListener('click', trocarUsuario);
   document.getElementById('busca').addEventListener('input', aplicarFiltros);
   iniciarSeletorModo();
+
+  document.getElementById('btnConfirmarNome').addEventListener('click', confirmarNome);
+  document.getElementById('btnCancelarNome').addEventListener('click', cancelarNome);
+  const inputNome = document.getElementById('inputNomeUsuario');
+  inputNome.addEventListener('keydown', e => { if(e.key === 'Enter') confirmarNome(); });
+  inputNome.addEventListener('input', () => {
+    inputNome.classList.remove('campo-invalido');
+    document.getElementById('erroNomeUsuario').classList.remove('visivel');
+  });
+
+  const nomeExistente = localStorage.getItem('estoqueUniformesUsuario');
+  document.getElementById('nomeUsuarioAtual').textContent = nomeExistente || '—';
+  if(!nomeExistente){
+    // Obrigatório: sem botão de cancelar, a caixa fica aberta até digitar algo
+    abrirModalNome(true, '');
+  }
 
   montarAbas();
   montarCards();
