@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>制服在庫管理システム / Controle de Estoque de Uniformes</title>
+<title>制服在庫管理システム</title>
 <style>
   :root{
     --navy:#1c3a56;
@@ -22,7 +22,7 @@
     margin:0;
     background:var(--bg);
     color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic",Meiryo,Roboto,Arial,sans-serif;
     padding-bottom:60px;
   }
   header{
@@ -45,8 +45,14 @@
     border-radius:5px;padding:3px 9px;font-size:.78rem;cursor:pointer;
   }
   .barra-status button:hover{background:rgba(255,255,255,.12);}
-  .seletor-modo{display:flex;gap:4px;}
-  .seletor-modo button.ativo{background:#fff;color:var(--navy);border-color:#fff;font-weight:700;}
+  .seletor-modo, .seletor-idioma{display:flex;gap:4px;}
+  .seletor-modo button.ativo, .seletor-idioma button.ativo{background:#fff;color:var(--navy);border-color:#fff;font-weight:700;}
+
+  .aviso-versao{
+    display:none;background:#fdf0dc;color:#7a4a05;padding:10px 16px;font-size:.84rem;
+    border-bottom:1px solid #e9cf9f;text-align:center;line-height:1.5;
+  }
+  .aviso-versao.visivel{display:block;}
 
   .container{max-width:1300px;margin:0 auto;padding:0 16px;}
 
@@ -61,49 +67,20 @@
   }
   .aba.ativa{background:var(--navy);border-color:var(--navy);color:#fff;}
   #busca{
-    flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--border);
+    flex:1;min-width:150px;padding:8px 12px;border:1px solid var(--border);
     border-radius:20px;font-size:.9rem;
   }
-  .btn-historico, .btn-solicitar, .btn-pendentes{
+  .btn-barra{
     border:1px solid var(--border);background:#fff;padding:8px 14px;border-radius:20px;
     font-size:.85rem;cursor:pointer;font-weight:600;color:var(--navy);position:relative;
   }
-  .btn-solicitar{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .btn-barra.destaque{background:var(--navy);color:#fff;border-color:var(--navy);}
   .badge-pendentes{
     background:var(--red);color:#fff;border-radius:999px;font-size:.68rem;font-weight:700;
     padding:1px 6px;margin-left:4px;
   }
-  .rotulo-campo{display:block;font-size:.76rem;font-weight:700;color:var(--text-soft);margin:12px 0 4px;}
-  .modal-nome select, .modal-nome input[type="text"], .modal-nome input[type="number"]{
-    width:100%;padding:10px 12px;font-size:.95rem;border:2px solid var(--border);
-    border-radius:8px;box-sizing:border-box;font-family:inherit;
-  }
-  .modal-nome select:focus, .modal-nome input:focus{outline:none;border-color:var(--navy);}
-  .modal-grande{max-height:85vh;overflow-y:auto;}
 
-  .lista-pedidos{overflow-y:auto;padding:8px 16px;flex:1;}
-  .item-pedido{
-    border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;
-  }
-  .item-pedido-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
-  .item-pedido-produto{font-weight:700;font-size:.92rem;}
-  .item-pedido-sub{font-size:.78rem;color:var(--text-soft);margin-top:2px;}
-  .status-badge{
-    font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap;
-  }
-  .status-badge.pendente{background:#fdf0dc;color:var(--amber);}
-  .status-badge.atendido{background:#e3f3e9;color:var(--green);}
-  .status-badge.fabrica{background:#e4edf5;color:var(--navy);}
-  .status-badge.cancelado{background:#f1eee3;color:var(--text-soft);}
-  .item-pedido-acoes{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
-  .item-pedido-acoes button{
-    flex:1;min-width:85px;border:none;border-radius:6px;padding:7px 6px;font-size:.76rem;
-    font-weight:700;cursor:pointer;color:#fff;
-  }
-  .btn-pedido-atendido{background:var(--green);}
-  .btn-pedido-fabrica{background:var(--navy);}
-  .btn-pedido-cancelar{background:var(--red);}
-
+  /* ---------- cartões dos produtos ---------- */
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:6px;}
 
   .card{
@@ -123,8 +100,8 @@
   .sem-imagem{color:#b7b2a4;font-size:.8rem;font-style:italic;padding:0 10px;text-align:center;}
   .card-titulo-area{padding:10px 14px 8px;}
   .card-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
-  .titulo-jp{font-weight:700;font-size:1.15rem;line-height:1.3;}
-  .titulo-pt{font-size:.8rem;color:var(--text-soft);margin-top:1px;}
+  .titulo-principal{font-weight:700;font-size:1.15rem;line-height:1.3;}
+  .titulo-secundario{font-size:.8rem;color:var(--text-soft);margin-top:1px;}
   .total-produto{
     font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.78rem;
     background:#eef2f6;color:var(--navy);border-radius:6px;padding:3px 7px;white-space:nowrap;
@@ -215,12 +192,14 @@
   body.modo-celular #busca{width:100%;min-width:0;}
   body.modo-celular .abas{justify-content:center;}
 
+  /* ---------- painéis laterais (histórico e pedidos) ---------- */
   .painel-lateral{
     position:fixed;top:0;right:0;height:100%;width:min(360px,100%);
     background:#fff;box-shadow:-4px 0 18px rgba(0,0,0,.15);
     transform:translateX(100%);transition:transform .25s ease;z-index:20;
     display:flex;flex-direction:column;
   }
+  #painelPedidos{width:min(430px,100%);}
   .painel-lateral.aberto{transform:translateX(0);}
   .painel-lateral-topo{
     padding:14px 16px;border-bottom:1px solid var(--border);
@@ -228,7 +207,7 @@
   }
   .painel-lateral-topo h3{margin:0;font-size:1rem;}
   .painel-lateral-topo button{border:none;background:none;font-size:1.3rem;cursor:pointer;color:var(--text-soft);}
-  .lista-historico{overflow-y:auto;padding:8px 16px;flex:1;}
+  .lista-historico, .lista-pedidos{overflow-y:auto;padding:8px 16px;flex:1;}
   .item-historico{padding:9px 0;border-bottom:1px solid #f0eee6;font-size:.85rem;}
   .item-historico .quando{color:var(--text-soft);font-size:.75rem;}
   .fundo-escurecido{
@@ -236,6 +215,38 @@
   }
   .fundo-escurecido.ativo{opacity:1;pointer-events:auto;}
 
+  /* ---------- pedidos ---------- */
+  .pedido{
+    border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px;background:#fff;
+  }
+  .pedido-cabecalho{border-bottom:1px dashed var(--border);padding-bottom:8px;margin-bottom:6px;}
+  .pedido-funcionario{font-weight:700;font-size:.98rem;}
+  .pedido-sub{font-size:.76rem;color:var(--text-soft);margin-top:2px;}
+  .pedido-em-lote{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+  .pedido-em-lote .rotulo-lote{font-size:.74rem;font-weight:700;color:var(--text-soft);}
+  .pedido-item{padding:8px 0;border-bottom:1px dotted #ece9df;}
+  .pedido-item:last-child{border-bottom:none;padding-bottom:0;}
+  .pedido-item-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .pedido-item-nome{font-weight:600;font-size:.88rem;}
+  .status-badge{
+    font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap;
+  }
+  .status-badge.pendente{background:#fdf0dc;color:var(--amber);}
+  .status-badge.atendido{background:#e3f3e9;color:var(--green);}
+  .status-badge.fabrica{background:#e4edf5;color:var(--navy);}
+  .status-badge.cancelado{background:#f1eee3;color:var(--text-soft);}
+  .pedido-acoes{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .pedido-acoes button, .pedido-em-lote button{
+    flex:1;min-width:84px;border:none;border-radius:6px;padding:7px 6px;font-size:.76rem;
+    font-weight:700;cursor:pointer;color:#fff;
+  }
+  .pedido-acoes button:disabled, .pedido-em-lote button:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-atendido{background:var(--green);}
+  .btn-fabrica{background:var(--navy);}
+  .btn-cancelar-pedido{background:var(--red);}
+  .subtitulo-lista{margin:14px 0 8px;font-size:.82rem;color:var(--text-soft);}
+
+  /* ---------- janelas (nome, pedido, relatório) ---------- */
   .modal-nome{
     position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);
     background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.25);
@@ -261,99 +272,220 @@
     padding:10px 18px;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;border:none;
   }
   .btn-modal-primario{background:var(--navy);color:#fff;}
+  .btn-modal-primario:disabled{opacity:.6;cursor:not-allowed;}
   .btn-modal-secundario{background:#f1eee3;color:var(--text);}
   #fundoNome{z-index:30;}
+  .modal-grande{max-height:88vh;overflow-y:auto;}
+
+  .rotulo-campo{display:block;font-size:.76rem;font-weight:700;color:var(--text-soft);margin:12px 0 4px;}
+  .modal-nome select, .modal-nome input[type="text"], .modal-nome input[type="number"]{
+    width:100%;padding:10px 12px;font-size:.95rem;border:2px solid var(--border);
+    border-radius:8px;box-sizing:border-box;font-family:inherit;background:#fff;
+  }
+  .modal-nome select:focus, .modal-nome input:focus{outline:none;border-color:var(--navy);}
+
+  /* pedido com vários itens */
+  .modal-solicitar{width:min(480px,94vw);}
+  .linha-item-solicitar{
+    display:grid;grid-template-columns:1fr 76px 38px;gap:6px;align-items:center;
+    border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;background:#faf9f5;
+  }
+  .linha-item-solicitar .sel-produto{grid-column:1 / -1;}
+  .btn-remover-item{
+    width:38px;height:38px;border:none;border-radius:8px;background:#f1eee3;color:var(--red);
+    font-size:1rem;font-weight:700;cursor:pointer;
+  }
+  .btn-remover-item:disabled{opacity:.35;cursor:not-allowed;}
+  .btn-adicionar-item{
+    width:100%;border:2px dashed var(--border);background:#fff;color:var(--navy);
+    border-radius:10px;padding:10px;font-size:.9rem;font-weight:700;cursor:pointer;
+  }
+  .btn-adicionar-item:hover{border-color:var(--navy);}
+  .resumo-solicitar{font-size:.82rem;color:var(--text-soft);margin:10px 0 0;text-align:right;}
+
+  /* relatório */
+  .modal-relatorio{width:min(1000px,96vw);}
+  .rel-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .rel-topo button{border:none;background:none;font-size:1.4rem;cursor:pointer;color:var(--text-soft);}
+  .rel-filtros{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin:12px 0 4px;}
+  .rel-grupo{display:flex;flex-direction:column;}
+  .rel-grupo .rotulo-campo{margin:0 0 4px;}
+  .rel-grupo select{width:auto !important;min-width:96px;padding:8px 10px !important;}
+  .rel-modos{display:flex;gap:4px;}
+  .rel-modos button{
+    border:1px solid var(--border);background:#fff;color:var(--text-soft);padding:8px 16px;
+    border-radius:20px;font-size:.85rem;font-weight:700;cursor:pointer;
+  }
+  .rel-modos button.ativo{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .btn-csv{
+    margin-left:auto;border:1px solid var(--border);background:#fff;color:var(--navy);
+    padding:8px 14px;border-radius:20px;font-size:.85rem;font-weight:700;cursor:pointer;
+  }
+  .rel-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0;}
+  .rel-card{border:1px solid var(--border);border-radius:10px;padding:10px 14px;background:#faf9f5;}
+  .rel-card .rotulo{font-size:.76rem;font-weight:700;color:var(--text-soft);}
+  .rel-card .numero{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:1.7rem;font-weight:700;margin-top:2px;}
+  .rel-card .sub{font-size:.72rem;color:var(--text-soft);margin-top:2px;}
+  .pos{color:var(--green);}
+  .neg{color:var(--red);}
+  .neutro{color:var(--navy);}
+  .rel-secao{margin:18px 0 6px;font-size:.92rem;font-weight:700;color:var(--navy);}
+  .rel-rolagem{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
+  .rel-tabela{width:100%;border-collapse:collapse;font-size:.84rem;min-width:560px;}
+  .rel-tabela th{
+    text-align:left;font-size:.72rem;color:var(--text-soft);text-transform:uppercase;letter-spacing:.03em;
+    background:#faf9f5;padding:8px 10px;border-bottom:2px solid var(--border);white-space:nowrap;
+  }
+  .rel-tabela td{padding:7px 10px;border-bottom:1px solid #f0eee6;vertical-align:top;}
+  .rel-tabela tr:last-child td{border-bottom:none;}
+  .rel-tabela .num{text-align:right;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;white-space:nowrap;}
+  .rel-tabela th.num{text-align:right;}
+  .rel-tabela .linha-produto td{font-weight:700;background:#fcfbf8;}
+  .rel-tabela .linha-tam td{color:var(--text-soft);font-size:.8rem;padding-top:4px;padding-bottom:4px;}
+  .rel-tabela .linha-tam td:first-child{padding-left:26px;}
+  .rel-tabela .linha-total td{font-weight:700;background:#faf9f5;border-top:2px solid var(--border);}
+  .rel-nota{font-size:.74rem;color:var(--text-soft);margin-top:14px;line-height:1.5;}
+  .rel-vazio{padding:22px;text-align:center;color:var(--text-soft);}
+
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--navy-dark);color:#fff;
+    padding:10px 18px;border-radius:999px;font-size:.88rem;opacity:0;pointer-events:none;
+    transition:opacity .25s, transform .25s;z-index:40;max-width:92vw;text-align:center;
+  }
+  .toast.visivel{opacity:1;transform:translate(-50%,0);}
 
   @media (max-width:480px){
     .card-imagem{height:150px;}
+    .rel-cards{grid-template-columns:1fr;}
+    .btn-csv{margin-left:0;}
   }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>制服在庫管理システム</h1>
-  <h2>Controle de Estoque de Uniformes</h2>
+  <h1 id="tituloPagina">制服在庫管理システム</h1>
+  <h2 id="subtituloPagina"></h2>
   <div class="barra-status">
-    <span><span class="ponto" id="pontoStatus"></span><span id="textoStatus" title="Carregando…">読み込み中…</span></span>
-    <span class="usuario-atual" title="Usuário">ユーザー: <strong id="nomeUsuarioAtual">—</strong> <button id="btnTrocarNome" title="Trocar nome">変更</button></span>
+    <span><span class="ponto" id="pontoStatus"></span><span id="textoStatus"></span></span>
+    <span class="usuario-atual"><span data-i18n="usuario"></span>: <strong id="nomeUsuarioAtual">—</strong> <button id="btnTrocarNome" data-i18n="trocar"></button></span>
+    <span class="seletor-idioma" id="seletorIdioma">
+      <button data-idioma="ja">日本語</button>
+      <button data-idioma="pt">Português</button>
+    </span>
     <span class="seletor-modo" id="seletorModo">
-      <button data-modo="auto" title="Automático">自動</button>
-      <button data-modo="pc" title="PC">🖥️ PC</button>
-      <button data-modo="celular" title="Celular">📱 スマホ</button>
+      <button data-modo="auto" data-i18n="modoAuto"></button>
+      <button data-modo="pc" data-i18n="modoPc"></button>
+      <button data-modo="celular" data-i18n="modoCelular"></button>
     </span>
   </div>
 </header>
+<div class="aviso-versao" id="avisoVersao" role="alert"></div>
 
 <div class="container">
   <div class="painel-controle">
     <div class="abas" id="abas"></div>
-    <input type="text" id="busca" placeholder="検索… / Buscar" title="Buscar uniforme">
-    <button class="btn-solicitar" id="btnSolicitar" title="Solicitar item para um funcionário">📋 依頼する</button>
-    <button class="btn-pendentes" id="btnPendentes" title="Pedidos pendentes">📥 依頼一覧<span class="badge-pendentes" id="badgePendentes" style="display:none;">0</span></button>
-    <button class="btn-historico" id="btnHistorico" title="Últimas alterações">🕒 変更履歴</button>
+    <input type="text" id="busca" data-i18n-ph="buscaPh" data-i18n-title="buscaTitulo">
+    <button class="btn-barra destaque" id="btnSolicitar" data-i18n="btnSolicitar" data-i18n-title="btnSolicitarTitulo"></button>
+    <button class="btn-barra" id="btnPendentes" data-i18n-title="btnPedidosTitulo"><span data-i18n="btnPedidos"></span><span class="badge-pendentes" id="badgePendentes" style="display:none;">0</span></button>
+    <button class="btn-barra" id="btnRelatorio" data-i18n="btnRelatorio" data-i18n-title="btnRelatorioTitulo"></button>
+    <button class="btn-barra" id="btnHistorico" data-i18n="btnHistorico" data-i18n-title="btnHistoricoTitulo"></button>
   </div>
 
   <div class="grid" id="grid"></div>
 </div>
 
+<!-- Nome do usuário (obrigatório na primeira visita) -->
 <div class="fundo-escurecido" id="fundoNome"></div>
-<div class="modal-nome" id="modalNome">
-  <h3>お名前を入力してください</h3>
-  <p class="modal-nome-sub">(Digite seu nome)</p>
-  <p class="modal-nome-explicacao">変更履歴に表示されます / Isso aparece no histórico de alterações, para sabermos quem mexeu no estoque.</p>
-  <input type="text" id="inputNomeUsuario" placeholder="名前 / Nome" autocomplete="off">
-  <div class="modal-nome-erro" id="erroNomeUsuario">⚠️ 名前を入力してください。 / Por favor, digite um nome antes de continuar.</div>
+<div class="modal-nome" id="modalNome" role="dialog" aria-modal="true">
+  <h3 data-i18n="nomeTitulo"></h3>
+  <p class="modal-nome-explicacao" data-i18n="nomeExplicacao"></p>
+  <input type="text" id="inputNomeUsuario" data-i18n-ph="nomePh" autocomplete="off">
+  <div class="modal-nome-erro" id="erroNomeUsuario" data-i18n="nomeErro"></div>
   <div class="modal-nome-botoes">
-    <button id="btnCancelarNome" class="btn-modal-secundario" title="Cancelar">キャンセル</button>
-    <button id="btnConfirmarNome" class="btn-modal-primario" title="Confirmar">確認 / Confirmar</button>
+    <button id="btnCancelarNome" class="btn-modal-secundario" data-i18n="cancelar"></button>
+    <button id="btnConfirmarNome" class="btn-modal-primario" data-i18n="confirmar"></button>
   </div>
 </div>
 
-<div class="modal-nome modal-grande" id="modalSolicitar">
-  <h3>制服を依頼する</h3>
-  <p class="modal-nome-sub">(Solicitar uniforme para um funcionário)</p>
+<!-- Pedido de uniformes (vários itens) -->
+<div class="modal-nome modal-grande modal-solicitar" id="modalSolicitar" role="dialog" aria-modal="true">
+  <h3 data-i18n="solTitulo"></h3>
+  <p class="modal-nome-sub" data-i18n="solSub"></p>
 
-  <label class="rotulo-campo">商品 / Produto</label>
-  <select id="selectProdutoSolicitar"></select>
+  <label class="rotulo-campo" for="inputFuncionarioSolicitar" data-i18n="solLblFuncionario"></label>
+  <input type="text" id="inputFuncionarioSolicitar" data-i18n-ph="solPhFuncionario" autocomplete="off" maxlength="80">
 
-  <label class="rotulo-campo">サイズ / Tamanho</label>
-  <select id="selectTamanhoSolicitar"></select>
+  <label class="rotulo-campo" data-i18n="solLblItens"></label>
+  <div id="listaItensSolicitar"></div>
+  <button type="button" class="btn-adicionar-item" id="btnAdicionarItem" data-i18n="solAdicionarItem"></button>
+  <p class="resumo-solicitar" id="resumoSolicitar"></p>
 
-  <label class="rotulo-campo">数量 / Quantidade</label>
-  <input type="number" id="inputQuantidadeSolicitar" value="1" min="1">
-
-  <label class="rotulo-campo">従業員名 / Nome do funcionário (quem vai usar)</label>
-  <input type="text" id="inputFuncionarioSolicitar" placeholder="名前 / Nome do funcionário" autocomplete="off">
-
-  <p class="modal-nome-explicacao" id="solicitantePreview"></p>
-
-  <div class="modal-nome-erro" id="erroSolicitar">⚠️ 必要項目を入力してください。 / Preencha o tamanho e o nome do funcionário.</div>
+  <p class="modal-nome-explicacao" id="solicitantePreview" style="margin-top:6px;"></p>
+  <div class="modal-nome-erro" id="erroSolicitar"></div>
 
   <div class="modal-nome-botoes">
-    <button id="btnCancelarSolicitar" class="btn-modal-secundario" title="Cancelar">キャンセル</button>
-    <button id="btnEnviarSolicitar" class="btn-modal-primario" title="Enviar pedido">送信 / Enviar</button>
+    <button id="btnCancelarSolicitar" class="btn-modal-secundario" data-i18n="cancelar"></button>
+    <button id="btnEnviarSolicitar" class="btn-modal-primario" data-i18n="solEnviar"></button>
   </div>
+</div>
+
+<!-- Relatório de movimentação -->
+<div class="modal-nome modal-grande modal-relatorio" id="modalRelatorio" role="dialog" aria-modal="true">
+  <div class="rel-topo">
+    <div>
+      <h3 data-i18n="relTitulo"></h3>
+      <p class="modal-nome-sub" data-i18n="relSub" style="margin-bottom:0;"></p>
+    </div>
+    <button id="fecharRelatorio" data-i18n-title="fechar">✕</button>
+  </div>
+
+  <div class="rel-filtros">
+    <div class="rel-modos">
+      <button id="relModoMensal" data-i18n="relMensal"></button>
+      <button id="relModoAnual" data-i18n="relAnual"></button>
+    </div>
+    <div class="rel-grupo">
+      <label class="rotulo-campo" for="relAno" data-i18n="relAno"></label>
+      <select id="relAno"></select>
+    </div>
+    <div class="rel-grupo" id="relGrupoMes">
+      <label class="rotulo-campo" for="relMes" data-i18n="relMes"></label>
+      <select id="relMes"></select>
+    </div>
+    <div class="rel-grupo">
+      <label class="rotulo-campo" for="relUsuario" data-i18n="relUsuario"></label>
+      <select id="relUsuario"></select>
+    </div>
+    <button class="btn-csv" id="btnCsv" data-i18n="relCsv"></button>
+  </div>
+
+  <div id="relCorpo"></div>
 </div>
 
 <div class="fundo-escurecido" id="fundoEscurecido"></div>
+
 <div class="painel-lateral" id="painelHistorico">
   <div class="painel-lateral-topo">
-    <h3 title="Últimas alterações">変更履歴</h3>
-    <button id="fecharHistorico">✕</button>
+    <h3 data-i18n="histTitulo"></h3>
+    <button id="fecharHistorico" data-i18n-title="fechar">✕</button>
   </div>
-  <div class="lista-historico" id="listaHistorico">読み込み中…</div>
+  <div class="lista-historico" id="listaHistorico"></div>
 </div>
 
 <div class="painel-lateral" id="painelPedidos">
   <div class="painel-lateral-topo">
-    <h3 title="Pedidos de uniforme">依頼一覧</h3>
-    <button id="fecharPedidos">✕</button>
+    <h3 data-i18n="pedTitulo"></h3>
+    <button id="fecharPedidos" data-i18n-title="fechar">✕</button>
   </div>
-  <div class="lista-pedidos" id="listaPedidos">読み込み中…</div>
+  <div class="lista-pedidos" id="listaPedidos"></div>
 </div>
 
+<div class="toast" id="toast" role="status"></div>
+
 <script>
+'use strict';
+
 /* =========================================================================
    CONFIGURAÇÃO
    ========================================================================= */
@@ -361,8 +493,183 @@ const CONFIG = {
   // Cole aqui a URL do seu Google Apps Script (termina em /exec)
   scriptUrl: "https://script.google.com/macros/s/AKfycbypQzaGVn6_ynz0CZvov6t_RRF6KzFx-R2RF1AWJu1AlMX7XNf2BRvrKysu-qtvjxFd/exec",
   intervaloAtualizacaoMs: 20000, // atualiza sozinho a cada 20s
-  estoqueBaixo: 2                // a partir de qual quantidade avisa "estoque baixo"
+  estoqueBaixo: 2,               // até esta quantidade o estoque aparece como "baixo"
+  versaoBackendMinima: 3,        // versão mínima do Apps Script (VERSAO_BACKEND no .gs)
+  limiteDetalheRelatorio: 300    // linhas do detalhe mostradas na tela (o CSV leva todas)
 };
+
+/* =========================================================================
+   TEXTOS (日本語 / Português)
+   Para mudar uma frase, edite aqui — as duas línguas lado a lado.
+   ========================================================================= */
+const TXT = {
+  ja: {
+    tituloPagina: '制服在庫管理システム',
+    subtituloPagina: 'Controle de Estoque de Uniformes',
+    carregando: '読み込み中…',
+    sincronizando: '同期中…',
+    sincronizadoAs: '{h} に同期しました',
+    configurarUrl: '⚠️ コード内の CONFIG.scriptUrl に Google Apps Script の URL を設定してください',
+    falhaConexao: '❌ スプレッドシートに接続できません。まもなく再試行します…',
+    usuario: 'ユーザー', trocar: '変更',
+    modoAuto: '自動', modoPc: '🖥️ PC', modoCelular: '📱 スマホ',
+    todos: 'すべて',
+    buscaPh: '検索…', buscaTitulo: '制服を検索',
+    btnSolicitar: '📋 依頼する', btnSolicitarTitulo: '従業員のために制服を依頼する',
+    btnPedidos: '📥 依頼一覧', btnPedidosTitulo: '依頼の一覧',
+    btnRelatorio: '📊 レポート', btnRelatorioTitulo: '月別・年別の入出庫レポート',
+    btnHistorico: '🕒 変更履歴', btnHistoricoTitulo: '最近の変更',
+    fechar: '閉じる', cancelar: 'キャンセル', confirmar: '確認',
+    unidades: '{n} 個',
+    dicaToque: 'タップして在庫を調整',
+    colTamanho: 'サイズ', colEstoque: '在庫数', colAjuste: '調整',
+    tituloValorExato: 'タップして数量を直接入力',
+    tituloMenos: '右の数量だけ減らす', tituloMais: '右の数量だけ増やす', tituloPasso: '1回に動かす数量',
+    semImagem: '画像なし',
+    nomeTitulo: 'お名前を入力してください',
+    nomeExplicacao: '変更履歴に表示されます。誰が在庫を操作したか分かるようにするためです。',
+    nomePh: '名前',
+    nomeErro: '⚠️ 名前を入力してください。',
+    histTitulo: '変更履歴',
+    histVazio: 'まだ変更履歴がありません。',
+    histErro: '履歴を読み込めませんでした。',
+    tamAbrev: 'サイズ',
+    acaoAdicionar: '入庫', acaoRetirar: '出庫', acaoDefinir: '調整',
+    pedTitulo: '依頼一覧',
+    pedVazio: 'まだ依頼がありません。',
+    pedErro: '依頼を読み込めませんでした。',
+    pedResolvidos: '最近対応済み',
+    funcionario: '従業員', solicitante: '依頼者',
+    statusPendente: '保留中', statusAtendido: '対応済み', statusFabrica: '工場へ発注', statusCancelado: 'キャンセル済み',
+    btnAtendido: '✅ 対応済み', btnFabrica: '🏭 工場へ', btnCancelarPedido: '❌ 取消',
+    tituloAtendido: '対応済みにして在庫から引く', tituloFabrica: '工場へ発注（事務所の在庫は減りません）', tituloCancelarPedido: '依頼を取り消す',
+    loteRotulo: '全件：',
+    confirmaSemEstoque: '在庫が足りない商品があります：\n{lista}\n\nそれでも対応済みにしますか？',
+    linhaFalta: '{nome} {tam}：在庫 {estoque} / 依頼 {qtd}',
+    solTitulo: '制服を依頼する',
+    solSub: '1回の依頼で複数の商品をまとめて入力できます。',
+    solLblFuncionario: '従業員名（着用する人）',
+    solPhFuncionario: '名前',
+    solLblItens: '商品',
+    solAdicionarItem: '＋ 商品を追加',
+    solRemover: '削除',
+    solLblProduto: '商品', solLblTamanho: 'サイズ', solLblQtd: '数量',
+    solResumo: '{n} 種類・合計 {q} 個',
+    solSolicitante: '依頼者：{u}',
+    solEnviar: '送信',
+    erroFuncionario: '⚠️ 従業員名を入力してください。',
+    erroQuantidade: '⚠️ 数量は1以上の整数にしてください。',
+    toastEnviado: '✅ 依頼を送信しました',
+    relTitulo: '入出庫レポート',
+    relSub: 'いつ・誰が・何を動かしたか',
+    relMensal: '月別', relAnual: '年別',
+    relAno: '年', relMes: '月', relUsuario: '担当者',
+    relTodos: 'すべて',
+    relCsv: '⬇ CSV出力',
+    relEntradas: '入庫', relSaidas: '出庫', relSaldo: '差引',
+    relMovimentos: '{n} 件',
+    relPorProduto: '商品別', relPorMes: '月別内訳', relDetalhe: '明細',
+    relColProduto: '商品', relColMes: '月', relColQuando: '日時', relColQuem: '担当者', relColTam: 'サイズ',
+    relColTipo: '種別', relColQtd: '数量', relColPara: '従業員', relColAntes: '前', relColDepois: '後',
+    relTotal: '合計',
+    tipoEntrada: '入庫', tipoSaida: '出庫', tipoAjuste: '調整',
+    relVazio: 'この期間の入出庫はありません。',
+    relErro: 'レポートを読み込めませんでした。',
+    avisoVersao: '⚠️ Apps Script の公開バージョンが古いままです。Apps Script の「Implantar > Gerenciar implantações」から新しいバージョンを公開してください。それまでレポートと複数商品の依頼は正しく動きません。',
+    relLimite: '※ 最新 {n} 件を表示しています。全件はCSV出力で確認できます。',
+    relNota: '※ このシステムから行った操作のみ集計されます（スプレッドシートを直接編集した分は含まれません）。数量の直接設定は、増減の差分を入庫／出庫として集計します。'
+  },
+  pt: {
+    tituloPagina: 'Controle de Estoque de Uniformes',
+    subtituloPagina: '制服在庫管理システム',
+    carregando: 'Carregando…',
+    sincronizando: 'Sincronizando…',
+    sincronizadoAs: 'Sincronizado às {h}',
+    configurarUrl: '⚠️ Configure a URL do Google Apps Script no código (CONFIG.scriptUrl)',
+    falhaConexao: '❌ Falha ao conectar à planilha. Tentando de novo em instantes…',
+    usuario: 'Usuário', trocar: 'trocar',
+    modoAuto: 'Auto', modoPc: '🖥️ PC', modoCelular: '📱 Celular',
+    todos: 'Todos',
+    buscaPh: 'Buscar uniforme…', buscaTitulo: 'Buscar uniforme',
+    btnSolicitar: '📋 Solicitar', btnSolicitarTitulo: 'Solicitar uniformes para um funcionário',
+    btnPedidos: '📥 Pedidos', btnPedidosTitulo: 'Lista de pedidos',
+    btnRelatorio: '📊 Relatório', btnRelatorioTitulo: 'Relatório de entradas e saídas por mês e por ano',
+    btnHistorico: '🕒 Histórico', btnHistoricoTitulo: 'Últimas alterações',
+    fechar: 'Fechar', cancelar: 'Cancelar', confirmar: 'Confirmar',
+    unidades: '{n} un.',
+    dicaToque: 'Toque para ajustar o estoque',
+    colTamanho: 'Tamanho', colEstoque: 'Estoque', colAjuste: 'Ajustar',
+    tituloValorExato: 'Toque para digitar um valor exato',
+    tituloMenos: 'Retirar a quantidade ao lado', tituloMais: 'Adicionar a quantidade ao lado', tituloPasso: 'Quantidade movida a cada clique',
+    semImagem: 'Sem imagem',
+    nomeTitulo: 'Digite seu nome',
+    nomeExplicacao: 'Aparece no histórico de alterações, para sabermos quem mexeu no estoque.',
+    nomePh: 'Nome',
+    nomeErro: '⚠️ Digite um nome antes de continuar.',
+    histTitulo: 'Últimas alterações',
+    histVazio: 'Nenhuma alteração registrada ainda.',
+    histErro: 'Não foi possível carregar o histórico.',
+    tamAbrev: 'tam.',
+    acaoAdicionar: 'adicionou', acaoRetirar: 'retirou', acaoDefinir: 'ajustou',
+    pedTitulo: 'Pedidos de uniforme',
+    pedVazio: 'Nenhum pedido ainda.',
+    pedErro: 'Não foi possível carregar os pedidos.',
+    pedResolvidos: 'Resolvidos recentemente',
+    funcionario: 'Funcionário', solicitante: 'Solicitante',
+    statusPendente: 'Pendente', statusAtendido: 'Atendido', statusFabrica: 'Pedido à fábrica', statusCancelado: 'Cancelado',
+    btnAtendido: '✅ Atendido', btnFabrica: '🏭 Fábrica', btnCancelarPedido: '❌ Cancelar',
+    tituloAtendido: 'Marcar como atendido (desconta do estoque)', tituloFabrica: 'Pedido à fábrica (não desconta do estoque do escritório)', tituloCancelarPedido: 'Cancelar o pedido',
+    loteRotulo: 'Todos:',
+    confirmaSemEstoque: 'Estoque insuficiente para:\n{lista}\n\nMarcar como atendido mesmo assim?',
+    linhaFalta: '{nome} {tam}: estoque {estoque} / pedido {qtd}',
+    solTitulo: 'Solicitar uniformes',
+    solSub: 'Você pode incluir vários itens em um único pedido.',
+    solLblFuncionario: 'Nome do funcionário (quem vai usar)',
+    solPhFuncionario: 'Nome do funcionário',
+    solLblItens: 'Itens do pedido',
+    solAdicionarItem: '＋ Adicionar item',
+    solRemover: 'Remover item',
+    solLblProduto: 'Produto', solLblTamanho: 'Tamanho', solLblQtd: 'Quantidade',
+    solResumo: '{n} item(ns), {q} peça(s) no total',
+    solSolicitante: 'Solicitante: {u}',
+    solEnviar: 'Enviar pedido',
+    erroFuncionario: '⚠️ Digite o nome do funcionário.',
+    erroQuantidade: '⚠️ A quantidade deve ser um número inteiro de 1 ou mais.',
+    toastEnviado: '✅ Pedido enviado',
+    relTitulo: 'Relatório de movimentação',
+    relSub: 'Quando, quem e o que entrou ou saiu do estoque',
+    relMensal: 'Mensal', relAnual: 'Anual',
+    relAno: 'Ano', relMes: 'Mês', relUsuario: 'Usuário',
+    relTodos: 'Todos',
+    relCsv: '⬇ Exportar CSV',
+    relEntradas: 'Entradas', relSaidas: 'Saídas', relSaldo: 'Saldo',
+    relMovimentos: '{n} movimentação(ões)',
+    relPorProduto: 'Por produto', relPorMes: 'Por mês', relDetalhe: 'Detalhe das movimentações',
+    relColProduto: 'Produto', relColMes: 'Mês', relColQuando: 'Data e hora', relColQuem: 'Usuário', relColTam: 'Tam.',
+    relColTipo: 'Tipo', relColQtd: 'Qtd.', relColPara: 'Funcionário', relColAntes: 'Antes', relColDepois: 'Depois',
+    relTotal: 'Total',
+    tipoEntrada: 'Entrada', tipoSaida: 'Saída', tipoAjuste: 'Ajuste',
+    relVazio: 'Nenhuma movimentação neste período.',
+    relErro: 'Não foi possível carregar o relatório.',
+    avisoVersao: '⚠️ O Google Apps Script publicado ainda está na versão antiga. No Apps Script: Implantar > Gerenciar implantações > lápis > Versão: Nova versão > Implantar. Até lá, o relatório e o pedido com vários itens não funcionam direito.',
+    relLimite: '* Mostrando as {n} mais recentes. Exporte o CSV para ver todas.',
+    relNota: '* Só entram no relatório as movimentações feitas pelo sistema (edições direto na planilha não contam). Ajustes de valor exato são contados como entrada ou saída conforme a diferença.'
+  }
+};
+
+let idioma = 'ja';
+function t(chave, vars){
+  let texto = (TXT[idioma] && TXT[idioma][chave]);
+  if(texto === undefined) texto = TXT.pt[chave];
+  if(texto === undefined) return chave;
+  if(vars) Object.keys(vars).forEach(k => { texto = texto.split('{' + k + '}').join(vars[k]); });
+  return texto;
+}
+function loc(){ return idioma === 'ja' ? 'ja-JP' : 'pt-BR'; }
+const $ = id => document.getElementById(id);
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
 /* =========================================================================
    CATÁLOGO DE PRODUTOS
@@ -371,85 +678,174 @@ const CONFIG = {
    troque os campos, e rode de novo "inicializarPlanilha" no Apps Script.
    ========================================================================= */
 const tamanhosRoupas = ['S','M','L','2L','3L','4L','5L','6L','7L'];
-const tamanhosBatas  = ['S','M','L','2L','3L','4L','5L','6L']; // 5L/6L adicionados
+const tamanhosBatas  = ['S','M','L','2L','3L','4L','5L','6L'];
 const tamanhosSapatos = (function(){ const a=[]; for(let s=23;s<=30;s+=0.5) a.push(s.toFixed(1)); return a; })();
 
 const categorias = [
-  { id:'manga-curta',     nome:'半袖', titulo:'Manga Curta' },
-  { id:'manga-comprida',  nome:'長袖・ズボン', titulo:'Manga Comprida / Calça' },
-  { id:'calcados',        nome:'靴', titulo:'Calçados' },
-  { id:'acessorios',      nome:'アクセサリー', titulo:'Acessórios' }
+  { id:'manga-curta',     ja:'半袖',          pt:'Manga Curta' },
+  { id:'manga-comprida',  ja:'長袖・ズボン',  pt:'Manga Comprida / Calça' },
+  { id:'calcados',        ja:'靴',            pt:'Calçados' },
+  { id:'acessorios',      ja:'アクセサリー',  pt:'Acessórios' }
 ];
 
 const produtos = [
-  { id:'mcc',       categoria:'manga-curta',    nome:'Manga Curta (Camisa)',        nomeJp:'半袖シャツ',       imagem:'manga-curta-camisa.jpg',      preco:'¥1.650', tamanhos:tamanhosRoupas },
-  { id:'mcb',       categoria:'manga-curta',    nome:'Manga Curta (Bluson)',        nomeJp:'半袖ブルゾン',     imagem:'manga-curta-bluson.jpg',      preco:'¥1.980', tamanhos:tamanhosRoupas },
-  { id:'mct',       categoria:'manga-curta',    nome:'Manga Curta (Bata/Smock)',    nomeJp:'半袖スモック',     imagem:'manga-curta-bata.jpg',        preco:'¥3.520', tamanhos:tamanhosBatas },
-  { id:'mccom',     categoria:'manga-comprida', nome:'Manga Comprida (Camisa)',     nomeJp:'長袖シャツ',       imagem:'manga-comprida-camisa.jpg',   preco:'¥1.815', tamanhos:tamanhosRoupas },
-  { id:'mcbom',     categoria:'manga-comprida', nome:'Manga Comprida (Bluson)',     nomeJp:'長袖ブルゾン',     imagem:'manga-comprida-bluson.jpg',   preco:'¥2.255', tamanhos:tamanhosRoupas },
-  { id:'mctom',     categoria:'manga-comprida', nome:'Manga Comprida (Bata/Smock)', nomeJp:'長袖スモック',     imagem:'manga-comprida-bata.jpg',     preco:'¥5.929', tamanhos:tamanhosBatas },
-  { id:'calca',     categoria:'manga-comprida', nome:'Calça',                       nomeJp:'ズボン',           imagem:'calca.jpg',                    preco:'¥1.815', tamanhos:tamanhosRoupas },
-  { id:'sapatoseg', categoria:'calcados',       nome:'Sapato de Segurança',         nomeJp:'安全靴',           imagem:'sapato-seguranca.jpg',         preco:'¥3.410', tamanhos:tamanhosSapatos },
-  { id:'sapatoant', categoria:'calcados',       nome:'Calçado Antiestático',        nomeJp:'静電靴',           imagem:'calcado-antiestatico.jpg',     preco:'¥3.784', tamanhos:tamanhosSapatos },
-  { id:'chapeu',    categoria:'acessorios',     nome:'Chapéu',                      nomeJp:'帽子',             imagem:'chapeu.jpg',                   preco:'¥715',   tamanhos:['F'] },
-  { id:'cracha',    categoria:'acessorios',     nome:'Crachá',                      nomeJp:'名札',             imagem:'cracha.jpg',                   preco:'¥330',   tamanhos:['--'] }
+  { id:'mcc',       categoria:'manga-curta',    nome:'Manga Curta (Camisa)',        nomeJp:'半袖シャツ',     imagem:'manga-curta-camisa.jpg',      preco:1650, tamanhos:tamanhosRoupas },
+  { id:'mcb',       categoria:'manga-curta',    nome:'Manga Curta (Bluson)',        nomeJp:'半袖ブルゾン',   imagem:'manga-curta-bluson.jpg',      preco:1980, tamanhos:tamanhosRoupas },
+  { id:'mct',       categoria:'manga-curta',    nome:'Manga Curta (Bata/Smock)',    nomeJp:'半袖スモック',   imagem:'manga-curta-bata.jpg',        preco:3520, tamanhos:tamanhosBatas },
+  { id:'mccom',     categoria:'manga-comprida', nome:'Manga Comprida (Camisa)',     nomeJp:'長袖シャツ',     imagem:'manga-comprida-camisa.jpg',   preco:1815, tamanhos:tamanhosRoupas },
+  { id:'mcbom',     categoria:'manga-comprida', nome:'Manga Comprida (Bluson)',     nomeJp:'長袖ブルゾン',   imagem:'manga-comprida-bluson.jpg',   preco:2255, tamanhos:tamanhosRoupas },
+  { id:'mctom',     categoria:'manga-comprida', nome:'Manga Comprida (Bata/Smock)', nomeJp:'長袖スモック',   imagem:'manga-comprida-bata.jpg',     preco:5929, tamanhos:tamanhosBatas },
+  { id:'calca',     categoria:'manga-comprida', nome:'Calça',                       nomeJp:'ズボン',         imagem:'calca.jpg',                    preco:1815, tamanhos:tamanhosRoupas },
+  { id:'sapatoseg', categoria:'calcados',       nome:'Sapato de Segurança',         nomeJp:'安全靴',         imagem:'sapato-seguranca.jpg',         preco:3410, tamanhos:tamanhosSapatos },
+  { id:'sapatoant', categoria:'calcados',       nome:'Calçado Antiestático',        nomeJp:'静電靴',         imagem:'calcado-antiestatico.jpg',     preco:3784, tamanhos:tamanhosSapatos },
+  { id:'chapeu',    categoria:'acessorios',     nome:'Chapéu',                      nomeJp:'帽子',           imagem:'chapeu.jpg',                   preco:715,  tamanhos:['F'] },
+  { id:'cracha',    categoria:'acessorios',     nome:'Crachá',                      nomeJp:'名札',           imagem:'cracha.jpg',                   preco:330,  tamanhos:['--'] }
 ];
+const produtoPorId = {};
+const produtoPorNomePt = {};
+produtos.forEach(p => { produtoPorId[p.id] = p; produtoPorNomePt[p.nome] = p; });
+
+function nomePrincipal(p){ return idioma === 'ja' ? p.nomeJp : p.nome; }
+function nomeSecundario(p){ return idioma === 'ja' ? p.nome : p.nomeJp; }
+function precoTexto(p){ return '¥' + p.preco.toLocaleString(loc()); }
+
+// Nome de um produto vindo da planilha (traz o nome em português e, às vezes, o japonês)
+function nomesDe(ptNome, jpNome){
+  const pt = ptNome || '';
+  const jp = jpNome || (produtoPorNomePt[pt] ? produtoPorNomePt[pt].nomeJp : '');
+  if(idioma === 'ja') return { principal: jp || pt, secundario: jp ? pt : '' };
+  return { principal: pt || jp, secundario: pt ? jp : '' };
+}
+function rotuloProduto(ptNome, jpNome){
+  const n = nomesDe(ptNome, jpNome);
+  return n.secundario ? `${n.principal}（${n.secundario}）` : n.principal;
+}
 
 /* =========================================================================
    ESTADO
    ========================================================================= */
 let abaAtiva = 'todas';
 let sincronizando = false;
+const estoqueMap = {};                       // "mcc_S" -> quantidade atual
+let estadoStatus = { chave:'carregando', tipo:'', vars:null };
+let estadoHistorico = { estado:'carregando', itens:[] };
+let estadoPedidos = { estado:'carregando', itens:[] };
+let itensSolicitar = [];
+let enviandoPedido = false;
+let backendAntigo = false;
+const relatorio = { aberto:false, modo:'mensal', ano:0, mes:0, usuario:'todos', dados:[], carregando:false, erro:false };
+
+/* =========================================================================
+   COMUNICAÇÃO COM O GOOGLE SHEETS
+   ========================================================================= */
+function urlConfigurada(){ return CONFIG.scriptUrl.indexOf('COLE_AQUI') === -1; }
+
+async function buscarJson(tipo, extra){
+  if(!urlConfigurada()) throw new Error('scriptUrl não configurada');
+  const resposta = await fetch(CONFIG.scriptUrl + '?tipo=' + tipo + (extra || ''), { cache:'no-store' });
+  const dados = await resposta.json();
+  if(!Array.isArray(dados)) throw new Error((dados && dados.erro) || 'resposta inesperada');
+  return dados;
+}
+
+async function postar(dados){
+  if(!urlConfigurada()) return;
+  dados.usuario = obterUsuario();
+  try{
+    // Apps Script não devolve cabeçalho CORS em POST, então usamos no-cors
+    // (não conseguimos ler a resposta, mas o envio funciona normalmente)
+    await fetch(CONFIG.scriptUrl, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{ 'Content-Type':'text/plain' },
+      body: JSON.stringify(dados)
+    });
+  }catch(erro){
+    console.error(erro);
+  }
+}
+
+// Salvar o código no editor do Apps Script não atualiza a URL publicada: é preciso
+// publicar uma "Nova versão". Se isso foi esquecido, o painel avisa em vez de mostrar dados errados.
+function renderAvisoVersao(){
+  const el = $('avisoVersao');
+  el.textContent = backendAntigo ? t('avisoVersao') : '';
+  el.classList.toggle('visivel', backendAntigo);
+}
+async function verificarVersaoBackend(){
+  if(!urlConfigurada()) return;
+  try{
+    const resposta = await fetch(CONFIG.scriptUrl + '?tipo=versao', { cache:'no-store' });
+    const dados = await resposta.json();
+    // um script antigo ignora "versao" e devolve a lista do estoque (um array)
+    backendAntigo = !(dados && !Array.isArray(dados) && Number(dados.versao) >= CONFIG.versaoBackendMinima);
+  }catch(erro){
+    console.error(erro); // sem conexão: o status do topo já avisa
+  }
+  renderAvisoVersao();
+}
+
+/* =========================================================================
+   IDIOMA
+   ========================================================================= */
+function aplicarIdioma(lang){
+  idioma = (lang === 'pt') ? 'pt' : 'ja';
+  try{ localStorage.setItem('estoqueUniformesIdioma', idioma); }catch(e){}
+  document.documentElement.lang = idioma;
+  document.title = t('tituloPagina');
+  $('tituloPagina').textContent = t('tituloPagina');
+  $('subtituloPagina').textContent = t('subtituloPagina');
+
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  document.querySelectorAll('#seletorIdioma button').forEach(b => b.classList.toggle('ativo', b.dataset.idioma === idioma));
+
+  atualizarAbas();
+  atualizarTextosCards();
+  renderStatus();
+  renderAvisoVersao();
+  renderItensSolicitar();
+  renderHistorico();
+  renderPedidos();
+  if(relatorio.aberto) renderRelatorio();
+}
 
 /* =========================================================================
    USUÁRIO (para saber quem alterou o quê)
    ========================================================================= */
 function obterUsuario(){
-  return localStorage.getItem('estoqueUniformesUsuario') || 'Anônimo';
+  try{ return localStorage.getItem('estoqueUniformesUsuario') || 'Anônimo'; }catch(e){ return 'Anônimo'; }
 }
 
 function abrirModalNome(obrigatorio, valorAtual){
-  const modal = document.getElementById('modalNome');
-  const fundo = document.getElementById('fundoNome');
-  const input = document.getElementById('inputNomeUsuario');
-  const erro = document.getElementById('erroNomeUsuario');
-  const btnCancelar = document.getElementById('btnCancelarNome');
-
+  const input = $('inputNomeUsuario');
   input.value = valorAtual || '';
   input.classList.remove('campo-invalido');
-  erro.classList.remove('visivel');
-  btnCancelar.style.display = obrigatorio ? 'none' : 'inline-block';
-  modal.classList.add('aberto');
-  fundo.classList.add('ativo');
+  $('erroNomeUsuario').classList.remove('visivel');
+  $('btnCancelarNome').style.display = obrigatorio ? 'none' : 'inline-block';
+  $('modalNome').classList.add('aberto');
+  $('fundoNome').classList.add('ativo');
   setTimeout(() => input.focus(), 100);
 }
 
 function fecharModalNome(){
-  document.getElementById('modalNome').classList.remove('aberto');
-  document.getElementById('fundoNome').classList.remove('ativo');
+  $('modalNome').classList.remove('aberto');
+  $('fundoNome').classList.remove('ativo');
 }
 
 function confirmarNome(){
-  const input = document.getElementById('inputNomeUsuario');
-  const erro = document.getElementById('erroNomeUsuario');
+  const input = $('inputNomeUsuario');
   const nome = input.value.trim();
   if(!nome){
-    erro.classList.add('visivel');
+    $('erroNomeUsuario').classList.add('visivel');
     input.classList.add('campo-invalido');
     input.focus();
     return;
   }
-  localStorage.setItem('estoqueUniformesUsuario', nome);
-  document.getElementById('nomeUsuarioAtual').textContent = nome;
+  try{ localStorage.setItem('estoqueUniformesUsuario', nome); }catch(e){}
+  $('nomeUsuarioAtual').textContent = nome;
   fecharModalNome();
-}
-
-function cancelarNome(){
-  fecharModalNome();
-}
-
-function trocarUsuario(){
-  abrirModalNome(false, obterUsuario());
 }
 
 /* =========================================================================
@@ -462,39 +858,31 @@ function aplicarModoVisual(modo){
   document.querySelectorAll('#seletorModo button').forEach(b => {
     b.classList.toggle('ativo', b.dataset.modo === modo);
   });
-  localStorage.setItem('estoqueUniformesModoVisual', modo);
+  try{ localStorage.setItem('estoqueUniformesModoVisual', modo); }catch(e){}
 }
 
 function iniciarSeletorModo(){
-  const salvo = localStorage.getItem('estoqueUniformesModoVisual') || 'auto';
+  let salvo = 'auto';
+  try{ salvo = localStorage.getItem('estoqueUniformesModoVisual') || 'auto'; }catch(e){}
   aplicarModoVisual(salvo);
-  document.getElementById('seletorModo').addEventListener('click', e => {
+  $('seletorModo').addEventListener('click', e => {
     const btn = e.target.closest('button');
     if(btn) aplicarModoVisual(btn.dataset.modo);
   });
 }
 
 /* =========================================================================
-   MONTAGEM DA INTERFACE
+   ABAS, CARTÕES E FILTROS
    ========================================================================= */
 function montarAbas(){
-  const container = document.getElementById('abas');
-  const todas = document.createElement('button');
-  todas.className = 'aba ativa';
-  todas.textContent = 'すべて';
-  todas.title = 'Todos';
-  todas.dataset.cat = 'todas';
-  container.appendChild(todas);
-
-  categorias.forEach(cat => {
+  const container = $('abas');
+  const opcoes = [{ id:'todas' }].concat(categorias);
+  opcoes.forEach(cat => {
     const btn = document.createElement('button');
-    btn.className = 'aba';
-    btn.textContent = cat.nome;
-    btn.title = cat.titulo;
+    btn.className = 'aba' + (cat.id === 'todas' ? ' ativa' : '');
     btn.dataset.cat = cat.id;
     container.appendChild(btn);
   });
-
   container.addEventListener('click', e => {
     const btn = e.target.closest('.aba');
     if(!btn) return;
@@ -504,43 +892,57 @@ function montarAbas(){
   });
 }
 
+function atualizarAbas(){
+  document.querySelectorAll('#abas .aba').forEach(btn => {
+    const cat = categorias.find(c => c.id === btn.dataset.cat);
+    btn.textContent = cat ? cat[idioma] : t('todos');
+    btn.title = cat ? cat[idioma === 'ja' ? 'pt' : 'ja'] : '';
+  });
+}
+
 function montarCards(){
-  const grid = document.getElementById('grid');
+  const grid = $('grid');
   produtos.forEach(prod => {
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.categoria = prod.categoria;
+    card.dataset.prod = prod.id;
     card.dataset.nome = (prod.nome + ' ' + prod.nomeJp).toLowerCase();
 
     card.innerHTML = `
       <div class="card-cabecalho">
         <div class="card-imagem">
-          <img src="${prod.imagem}" alt="${prod.nomeJp}"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-          <div class="sem-imagem" style="display:none;">Imagem "${prod.imagem}" não encontrada nesta pasta</div>
+          <img src="${esc(prod.imagem)}" alt="">
+          <div class="sem-imagem" style="display:none;"><span data-i18n="semImagem"></span><br><small>${esc(prod.imagem)}</small></div>
         </div>
         <div class="card-titulo-area">
           <div class="card-topo">
             <div>
-              <div class="titulo-jp">${prod.nomeJp}</div>
-              <div class="titulo-pt">(${prod.nome})</div>
+              <div class="titulo-principal"></div>
+              <div class="titulo-secundario"></div>
             </div>
-            <div class="total-produto" data-total="${prod.id}">0 un.</div>
+            <div class="total-produto" data-total="${prod.id}" data-n="0"></div>
           </div>
-          <div class="preco">${prod.preco}</div>
-          <div class="dica-toque" title="Toque na foto para ajustar o estoque"><span class="seta">▾</span> タップして在庫を調整</div>
+          <div class="preco"></div>
+          <div class="dica-toque"><span class="seta">▾</span> <span data-i18n="dicaToque"></span></div>
         </div>
       </div>
       <div class="card-detalhe">
         <div class="cabecalho-tamanhos">
-          <span class="col-tamanho" title="Tamanho">サイズ</span>
-          <span class="col-estoque" title="Estoque atual">在庫数</span>
-          <span class="col-ajuste" title="Ajustar quantidade">調整</span>
+          <span class="col-tamanho" data-i18n="colTamanho"></span>
+          <span class="col-estoque" data-i18n="colEstoque"></span>
+          <span class="col-ajuste" data-i18n="colAjuste"></span>
         </div>
         <div class="linhas-tamanho" id="linhas-${prod.id}"></div>
       </div>
     `;
     grid.appendChild(card);
+
+    const img = card.querySelector('img');
+    img.addEventListener('error', () => {
+      img.style.display = 'none';
+      card.querySelector('.sem-imagem').style.display = 'block';
+    });
 
     card.querySelector('.card-cabecalho').addEventListener('click', () => {
       card.classList.toggle('aberto');
@@ -553,12 +955,12 @@ function montarCards(){
       linha.className = 'linha-tamanho';
       linha.dataset.id = id;
       linha.innerHTML = `
-        <span class="etiqueta-tamanho">${tam}</span>
-        <span class="valor-estoque-col"><span class="valor-estoque" title="Toque para digitar um valor exato">0</span></span>
+        <span class="etiqueta-tamanho">${esc(tam)}</span>
+        <span class="valor-estoque-col"><span class="valor-estoque" data-i18n-title="tituloValorExato">0</span></span>
         <div class="controles">
-          <button class="btn-passo btn-menos" title="Retirar a quantidade ao lado">−</button>
-          <input type="number" class="input-passo" value="1" min="1" step="1" title="Quantidade movida a cada clique">
-          <button class="btn-passo btn-mais" title="Adicionar a quantidade ao lado">+</button>
+          <button class="btn-passo btn-menos" data-i18n-title="tituloMenos">−</button>
+          <input type="number" class="input-passo" value="1" min="1" step="1" data-i18n-title="tituloPasso">
+          <button class="btn-passo btn-mais" data-i18n-title="tituloMais">+</button>
         </div>
       `;
       container.appendChild(linha);
@@ -575,11 +977,21 @@ function montarCards(){
   });
 }
 
-/* =========================================================================
-   FILTROS (abas + busca)
-   ========================================================================= */
+function atualizarTextosCards(){
+  produtos.forEach(p => {
+    const card = document.querySelector(`.card[data-prod="${p.id}"]`);
+    if(!card) return;
+    card.querySelector('.titulo-principal').textContent = nomePrincipal(p);
+    card.querySelector('.titulo-secundario').textContent = '(' + nomeSecundario(p) + ')';
+    card.querySelector('.preco').textContent = precoTexto(p);
+    card.querySelector('img').alt = nomePrincipal(p);
+    const total = card.querySelector('.total-produto');
+    total.textContent = t('unidades', { n: total.dataset.n || 0 });
+  });
+}
+
 function aplicarFiltros(){
-  const termo = document.getElementById('busca').value.trim().toLowerCase();
+  const termo = $('busca').value.trim().toLowerCase();
   document.querySelectorAll('.card').forEach(card => {
     const bateAba = (abaAtiva === 'todas') || (card.dataset.categoria === abaAtiva);
     const bateBusca = !termo || card.dataset.nome.includes(termo);
@@ -588,7 +1000,7 @@ function aplicarFiltros(){
 }
 
 /* =========================================================================
-   SINCRONIZAÇÃO COM O GOOGLE SHEETS
+   SINCRONIZAÇÃO DO ESTOQUE
    ========================================================================= */
 function aplicarNivelEstoque(linha, quantidade){
   linha.classList.remove('sem-estoque', 'estoque-baixo', 'estoque-ok');
@@ -601,27 +1013,31 @@ function aplicarNivelEstoque(linha, quantidade){
   }
 }
 
-function definirStatus(texto, tipo){
-  document.getElementById('textoStatus').textContent = texto;
-  const ponto = document.getElementById('pontoStatus');
-  ponto.className = 'ponto' + (tipo === 'ok' ? ' ok' : tipo === 'erro' ? ' erro' : '');
+function definirStatus(chave, tipo, vars){
+  estadoStatus = { chave, tipo: tipo || '', vars: vars || null };
+  renderStatus();
+}
+function renderStatus(){
+  const vars = estadoStatus.vars ? Object.assign({}, estadoStatus.vars) : null;
+  if(vars && vars.hora) vars.h = new Date(vars.hora).toLocaleTimeString(loc());
+  $('textoStatus').textContent = t(estadoStatus.chave, vars);
+  $('pontoStatus').className = 'ponto' + (estadoStatus.tipo === 'ok' ? ' ok' : estadoStatus.tipo === 'erro' ? ' erro' : '');
 }
 
 async function carregarEstoqueAtual(silencioso){
-  if(CONFIG.scriptUrl.indexOf('COLE_AQUI') !== -1){
-    definirStatus('⚠️ Configure a URL do Google Apps Script no código (CONFIG.scriptUrl)', 'erro');
+  if(!urlConfigurada()){
+    definirStatus('configurarUrl', 'erro');
     return;
   }
   if(sincronizando) return;
   sincronizando = true;
-  if(!silencioso) definirStatus('Sincronizando…');
+  if(!silencioso) definirStatus('sincronizando');
 
   try{
-    const resposta = await fetch(CONFIG.scriptUrl + '?tipo=estoque', { cache:'no-store' });
-    const dados = await resposta.json();
-
+    const dados = await buscarJson('estoque');
     const totais = {};
     dados.forEach(item => {
+      estoqueMap[item.id] = item.quantidade;
       const linha = document.querySelector(`.linha-tamanho[data-id="${item.id}"]`);
       if(linha){
         linha.querySelector('.valor-estoque').textContent = item.quantidade;
@@ -632,19 +1048,20 @@ async function carregarEstoqueAtual(silencioso){
     });
     Object.keys(totais).forEach(prodId => {
       const el = document.querySelector(`[data-total="${prodId}"]`);
-      if(el) el.textContent = totais[prodId] + ' un.';
+      if(el){ el.dataset.n = totais[prodId]; el.textContent = t('unidades', { n: totais[prodId] }); }
     });
-
-    const agora = new Date();
-    definirStatus('Sincronizado às ' + agora.toLocaleTimeString('pt-BR'), 'ok');
+    definirStatus('sincronizadoAs', 'ok', { hora: Date.now() });
   }catch(erro){
     console.error(erro);
-    definirStatus('❌ Falha ao conectar à planilha. Tentando de novo em instantes…', 'erro');
+    definirStatus('falhaConexao', 'erro');
   }finally{
     sincronizando = false;
   }
 }
 
+/* =========================================================================
+   AJUSTE DE ESTOQUE (+ / − / valor exato)
+   ========================================================================= */
 async function alterarEstoque(prod, tamanho, acao, quantidade, linha){
   const id = prod.id + '_' + tamanho;
   const valorEl = linha.querySelector('.valor-estoque');
@@ -654,6 +1071,7 @@ async function alterarEstoque(prod, tamanho, acao, quantidade, linha){
   const atual = parseInt(valorEl.textContent, 10) || 0;
   const novoValorOtimista = acao === 'adicionar' ? atual + quantidade : Math.max(0, atual - quantidade);
   valorEl.textContent = novoValorOtimista;
+  estoqueMap[id] = novoValorOtimista;
   aplicarNivelEstoque(linha, novoValorOtimista);
 
   await enviarAlteracao({ action: acao, id, produto: prod.nome, produtoJp: prod.nomeJp, tamanho, quantidade });
@@ -662,26 +1080,30 @@ async function alterarEstoque(prod, tamanho, acao, quantidade, linha){
 
 function editarValorExato(prod, tamanho, linha){
   const valorEl = linha.querySelector('.valor-estoque');
-  const atual = valorEl.textContent;
   const input = document.createElement('input');
   input.type = 'number';
   input.min = '0';
-  input.value = atual;
+  input.value = valorEl.textContent;
   valorEl.replaceWith(input);
   input.focus();
   input.select();
 
+  let concluido = false; // o navegador pode disparar "blur" mais de uma vez
   const confirmar = async () => {
+    if(concluido) return;
+    concluido = true;
     const novo = Math.max(0, parseInt(input.value, 10) || 0);
     const novoSpan = document.createElement('span');
     novoSpan.className = 'valor-estoque';
-    novoSpan.title = 'Toque para digitar um valor exato';
+    novoSpan.dataset.i18nTitle = 'tituloValorExato';
+    novoSpan.title = t('tituloValorExato');
     novoSpan.textContent = novo;
     input.replaceWith(novoSpan);
     novoSpan.addEventListener('click', () => editarValorExato(prod, tamanho, linha));
+    const id = prod.id + '_' + tamanho;
+    estoqueMap[id] = novo;
     aplicarNivelEstoque(linha, novo);
 
-    const id = prod.id + '_' + tamanho;
     await enviarAlteracao({ action:'definir', id, produto: prod.nome, produtoJp: prod.nomeJp, tamanho, quantidade: novo });
   };
   input.addEventListener('blur', confirmar);
@@ -689,292 +1111,612 @@ function editarValorExato(prod, tamanho, linha){
 }
 
 async function enviarAlteracao(dados){
-  dados.usuario = obterUsuario();
-  try{
-    // Apps Script não devolve cabeçalho CORS em POST, então usamos no-cors
-    // (não conseguimos ler a resposta, mas o envio funciona normalmente)
-    await fetch(CONFIG.scriptUrl, {
-      method:'POST',
-      mode:'no-cors',
-      headers:{ 'Content-Type':'text/plain' },
-      body: JSON.stringify(dados)
-    });
-  }catch(erro){
-    console.error(erro);
-  }finally{
-    setTimeout(() => carregarEstoqueAtual(true), 1200);
-  }
+  await postar(dados);
+  setTimeout(() => carregarEstoqueAtual(true), 1200);
 }
 
 /* =========================================================================
    HISTÓRICO DE ALTERAÇÕES
    ========================================================================= */
-const traducaoAcao = { adicionar:'adicionou', retirar:'retirou', definir:'ajustou para' };
-const mapaNomeParaJp = {};
-produtos.forEach(p => { mapaNomeParaJp[p.nome] = p.nomeJp; });
+function dataHoraLocal(iso){
+  return iso ? new Date(iso).toLocaleString(loc()) : '';
+}
 
 async function carregarHistorico(){
-  const lista = document.getElementById('listaHistorico');
-  lista.textContent = '読み込み中…';
+  estadoHistorico = { estado:'carregando', itens:[] };
+  renderHistorico();
   try{
-    const resposta = await fetch(CONFIG.scriptUrl + '?tipo=historico', { cache:'no-store' });
-    const itens = await resposta.json();
-    if(!itens.length){ lista.textContent = 'まだ変更履歴がありません。'; return; }
-
-    lista.innerHTML = '';
-    itens.forEach(it => {
-      const div = document.createElement('div');
-      div.className = 'item-historico';
-      const acaoTexto = traducaoAcao[it.acao] || it.acao;
-      const dataHora = it.dataHora ? new Date(it.dataHora).toLocaleString('pt-BR') : '';
-      const detalhe = it.acao === 'definir'
-        ? `${it.quantidadeNova}`
-        : `${it.quantidadeAnterior} → ${it.quantidadeNova}`;
-      const nomeJp = mapaNomeParaJp[it.produto] || '';
-      div.innerHTML = `
-        <div><strong>${it.usuario}</strong> ${acaoTexto} ${detalhe} — ${nomeJp} (${it.produto}), tam. ${it.tamanho}</div>
-        <div class="quando">${dataHora}</div>
-      `;
-      lista.appendChild(div);
-    });
+    estadoHistorico = { estado:'ok', itens: await buscarJson('historico') };
   }catch(erro){
-    lista.textContent = '履歴を読み込めませんでした。';
+    console.error(erro);
+    estadoHistorico = { estado:'erro', itens:[] };
   }
+  renderHistorico();
+}
+
+function renderHistorico(){
+  const lista = $('listaHistorico');
+  if(estadoHistorico.estado === 'carregando'){ lista.textContent = t('carregando'); return; }
+  if(estadoHistorico.estado === 'erro'){ lista.textContent = t('histErro'); return; }
+  if(!estadoHistorico.itens.length){ lista.textContent = t('histVazio'); return; }
+
+  const acoes = { adicionar:'acaoAdicionar', retirar:'acaoRetirar', definir:'acaoDefinir' };
+  lista.innerHTML = estadoHistorico.itens.map(it => {
+    const acao = acoes[it.acao] ? t(acoes[it.acao]) : esc(it.acao);
+    const para = it.funcionario ? ` · 👤 ${esc(it.funcionario)}` : '';
+    return `
+      <div class="item-historico">
+        <div><strong>${esc(it.usuario)}</strong> ${acao} — ${esc(rotuloProduto(it.produto))}, ${t('tamAbrev')} ${esc(it.tamanho)}:
+          ${esc(it.quantidadeAnterior)} → ${esc(it.quantidadeNova)}${para}</div>
+        <div class="quando">${esc(dataHoraLocal(it.dataHora))}</div>
+      </div>`;
+  }).join('');
 }
 
 /* =========================================================================
-   SOLICITAÇÃO DE UNIFORMES (pedido do tantousha em nome de um funcionário)
+   PEDIDOS DE UNIFORME (um pedido pode ter vários itens)
    ========================================================================= */
-const traducaoStatus = {
-  'Pendente': { texto: 'ステータス：保留中', classe: 'pendente' },
-  'Atendido': { texto: 'ステータス：対応済み', classe: 'atendido' },
-  'Pedido à fábrica': { texto: 'ステータス：工場へ発注', classe: 'fabrica' },
-  'Cancelado': { texto: 'ステータス：キャンセル済み', classe: 'cancelado' }
-};
-
-function popularSelectProdutoSolicitar(){
-  const select = document.getElementById('selectProdutoSolicitar');
-  select.innerHTML = produtos.map(p => `<option value="${p.id}">${p.nomeJp}（${p.nome}）</option>`).join('');
-  popularSelectTamanhoSolicitar();
+function textoStatus(status){
+  const chaves = { 'Pendente':'statusPendente', 'Atendido':'statusAtendido', 'Pedido à fábrica':'statusFabrica', 'Cancelado':'statusCancelado' };
+  return chaves[status] ? t(chaves[status]) : status;
+}
+function classeStatus(status){
+  return { 'Pendente':'pendente', 'Atendido':'atendido', 'Pedido à fábrica':'fabrica', 'Cancelado':'cancelado' }[status] || '';
 }
 
-function popularSelectTamanhoSolicitar(){
-  const produtoId = document.getElementById('selectProdutoSolicitar').value;
-  const prod = produtos.find(p => p.id === produtoId) || produtos[0];
-  const select = document.getElementById('selectTamanhoSolicitar');
-  select.innerHTML = prod.tamanhos.map(t => `<option value="${t}">${t}</option>`).join('');
+function novoItemSolicitar(){
+  return { produtoId: produtos[0].id, tamanho: produtos[0].tamanhos[0], quantidade: 1 };
+}
+
+function renderItensSolicitar(){
+  const lista = $('listaItensSolicitar');
+  lista.innerHTML = '';
+  itensSolicitar.forEach((item, indice) => {
+    const prod = produtoPorId[item.produtoId] || produtos[0];
+    const linha = document.createElement('div');
+    linha.className = 'linha-item-solicitar';
+    linha.innerHTML = `
+      <select class="sel-produto" aria-label="${esc(t('solLblProduto'))}">
+        ${produtos.map(p => `<option value="${p.id}"${p.id === prod.id ? ' selected' : ''}>${esc(nomePrincipal(p))}（${esc(nomeSecundario(p))}）</option>`).join('')}
+      </select>
+      <select class="sel-tamanho" aria-label="${esc(t('solLblTamanho'))}">
+        ${prod.tamanhos.map(tam => `<option value="${esc(tam)}"${tam === item.tamanho ? ' selected' : ''}>${esc(t('solLblTamanho'))} ${esc(tam)}</option>`).join('')}
+      </select>
+      <input type="number" class="inp-quantidade" min="1" step="1" value="${esc(item.quantidade)}" aria-label="${esc(t('solLblQtd'))}" title="${esc(t('solLblQtd'))}">
+      <button type="button" class="btn-remover-item" title="${esc(t('solRemover'))}" ${itensSolicitar.length === 1 ? 'disabled' : ''}>✕</button>
+    `;
+    lista.appendChild(linha);
+
+    linha.querySelector('.sel-produto').addEventListener('change', e => {
+      item.produtoId = e.target.value;
+      item.tamanho = (produtoPorId[item.produtoId] || produtos[0]).tamanhos[0];
+      renderItensSolicitar();
+    });
+    linha.querySelector('.sel-tamanho').addEventListener('change', e => { item.tamanho = e.target.value; });
+    linha.querySelector('.inp-quantidade').addEventListener('input', e => {
+      item.quantidade = e.target.value;
+      atualizarResumoSolicitar();
+    });
+    linha.querySelector('.btn-remover-item').addEventListener('click', () => {
+      if(itensSolicitar.length > 1){ itensSolicitar.splice(indice, 1); renderItensSolicitar(); }
+    });
+  });
+  atualizarResumoSolicitar();
+  $('solicitantePreview').textContent = t('solSolicitante', { u: obterUsuario() });
+}
+
+function atualizarResumoSolicitar(){
+  const total = itensSolicitar.reduce((soma, i) => soma + (parseInt(i.quantidade, 10) || 0), 0);
+  $('resumoSolicitar').textContent = t('solResumo', { n: itensSolicitar.length, q: total });
+}
+
+function mostrarErroSolicitar(chave){
+  const caixa = $('erroSolicitar');
+  if(!chave){ caixa.classList.remove('visivel'); caixa.textContent = ''; return; }
+  caixa.textContent = t(chave);
+  caixa.classList.add('visivel');
 }
 
 function abrirModalSolicitar(){
-  document.getElementById('selectProdutoSolicitar').value = produtos[0].id;
-  popularSelectTamanhoSolicitar();
-  document.getElementById('inputQuantidadeSolicitar').value = 1;
-  document.getElementById('inputFuncionarioSolicitar').value = '';
-  document.getElementById('solicitantePreview').textContent = '依頼者 / Solicitante: ' + obterUsuario();
-  document.getElementById('erroSolicitar').classList.remove('visivel');
-
-  document.getElementById('modalSolicitar').classList.add('aberto');
-  document.getElementById('fundoEscurecido').classList.add('ativo');
+  itensSolicitar = [novoItemSolicitar()];
+  $('inputFuncionarioSolicitar').value = '';
+  mostrarErroSolicitar(null);
+  renderItensSolicitar();
+  $('modalSolicitar').classList.add('aberto');
+  $('fundoEscurecido').classList.add('ativo');
 }
 
 function fecharModalSolicitar(){
-  document.getElementById('modalSolicitar').classList.remove('aberto');
-  document.getElementById('fundoEscurecido').classList.remove('ativo');
+  $('modalSolicitar').classList.remove('aberto');
+  $('fundoEscurecido').classList.remove('ativo');
+}
+
+function mostrarToast(chave){
+  const el = $('toast');
+  el.textContent = t(chave);
+  el.classList.add('visivel');
+  clearTimeout(mostrarToast.timer);
+  mostrarToast.timer = setTimeout(() => el.classList.remove('visivel'), 3200);
 }
 
 async function enviarSolicitacao(){
-  const produtoId = document.getElementById('selectProdutoSolicitar').value;
-  const tamanho = document.getElementById('selectTamanhoSolicitar').value;
-  const quantidade = Math.max(1, parseInt(document.getElementById('inputQuantidadeSolicitar').value, 10) || 1);
-  const funcionario = document.getElementById('inputFuncionarioSolicitar').value.trim();
-  const erro = document.getElementById('erroSolicitar');
-
+  if(enviandoPedido) return;
+  const funcionario = $('inputFuncionarioSolicitar').value.trim();
   if(!funcionario){
-    erro.classList.add('visivel');
-    document.getElementById('inputFuncionarioSolicitar').focus();
+    mostrarErroSolicitar('erroFuncionario');
+    $('inputFuncionarioSolicitar').focus();
     return;
   }
-  erro.classList.remove('visivel');
-
-  const prod = produtos.find(p => p.id === produtoId);
-  const btn = document.getElementById('btnEnviarSolicitar');
-  btn.disabled = true;
-
-  try{
-    await fetch(CONFIG.scriptUrl, {
-      method:'POST',
-      mode:'no-cors',
-      headers:{ 'Content-Type':'text/plain' },
-      body: JSON.stringify({
-        action:'solicitar',
-        solicitante: obterUsuario(),
-        funcionario,
-        produtoId,
-        produto: prod.nome,
-        produtoJp: prod.nomeJp,
-        tamanho,
-        quantidade
-      })
-    });
-  }catch(erroEnvio){
-    console.error(erroEnvio);
-  }finally{
-    btn.disabled = false;
-    fecharModalSolicitar();
-    setTimeout(carregarPedidos, 1000);
+  const itens = [];
+  for(const item of itensSolicitar){
+    const quantidade = Number(item.quantidade);
+    if(!Number.isInteger(quantidade) || quantidade < 1){
+      mostrarErroSolicitar('erroQuantidade');
+      return;
+    }
+    itens.push({ produtoId: item.produtoId, tamanho: item.tamanho, quantidade });
   }
+  mostrarErroSolicitar(null);
+
+  enviandoPedido = true;
+  const btn = $('btnEnviarSolicitar');
+  btn.disabled = true;
+  await postar({ action:'solicitar', solicitante: obterUsuario(), funcionario, itens });
+  enviandoPedido = false;
+  btn.disabled = false;
+  fecharModalSolicitar();
+  mostrarToast('toastEnviado');
+  setTimeout(carregarPedidos, 1200);
 }
 
 function abrirPainelPedidos(){
-  document.getElementById('painelPedidos').classList.add('aberto');
-  document.getElementById('fundoEscurecido').classList.add('ativo');
+  $('painelPedidos').classList.add('aberto');
+  $('fundoEscurecido').classList.add('ativo');
   carregarPedidos();
 }
 function fecharPainelPedidos(){
-  document.getElementById('painelPedidos').classList.remove('aberto');
-  document.getElementById('fundoEscurecido').classList.remove('ativo');
+  $('painelPedidos').classList.remove('aberto');
+  $('fundoEscurecido').classList.remove('ativo');
+}
+
+// Junta as linhas da planilha em pedidos (cada pedido tem uma lista de itens)
+function agruparPedidos(linhas){
+  const mapa = new Map();
+  linhas.forEach(it => {
+    const chave = it.pedidoId || it.id; // pedido antigo, sem PedidoID: vale como pedido de um item só
+    if(!mapa.has(chave)){
+      mapa.set(chave, {
+        pedidoId: chave, funcionario: it.funcionario, solicitante: it.solicitante,
+        dataSolicitacao: it.dataSolicitacao, itens: []
+      });
+    }
+    mapa.get(chave).itens.push(it);
+  });
+  const pedidos = Array.from(mapa.values());
+  pedidos.forEach(p => p.itens.reverse()); // a planilha vem do mais novo para o mais antigo
+  return pedidos;
 }
 
 async function carregarPedidos(){
   try{
-    const resposta = await fetch(CONFIG.scriptUrl + '?tipo=solicitacoes', { cache:'no-store' });
-    const pedidos = await resposta.json();
-
-    const pendentes = pedidos.filter(p => p.status === 'Pendente');
-    const resolvidos = pedidos.filter(p => p.status !== 'Pendente').slice(0, 10);
-
-    const badge = document.getElementById('badgePendentes');
-    if(pendentes.length > 0){ badge.textContent = pendentes.length; badge.style.display = 'inline-block'; }
-    else { badge.style.display = 'none'; }
-
-    const lista = document.getElementById('listaPedidos');
-    lista.innerHTML = '';
-
-    if(pedidos.length === 0){
-      lista.textContent = 'まだ依頼がありません。 (Nenhum pedido ainda.)';
-      return;
-    }
-
-    pendentes.forEach(p => lista.appendChild(criarItemPedido(p, true)));
-    if(resolvidos.length > 0){
-      const titulo = document.createElement('div');
-      titulo.className = 'modal-nome-sub';
-      titulo.style.margin = '14px 0 8px';
-      titulo.textContent = '最近対応済み / Resolvidos recentemente';
-      lista.appendChild(titulo);
-      resolvidos.forEach(p => lista.appendChild(criarItemPedido(p, false)));
-    }
+    estadoPedidos = { estado:'ok', itens: await buscarJson('solicitacoes') };
   }catch(erro){
-    document.getElementById('listaPedidos').textContent = '依頼を読み込めませんでした。 (Não foi possível carregar os pedidos.)';
+    console.error(erro);
+    estadoPedidos = { estado:'erro', itens:[] };
   }
+  renderPedidos();
 }
 
-function criarItemPedido(p, comAcoes){
+function renderPedidos(){
+  const lista = $('listaPedidos');
+  const badge = $('badgePendentes');
+  if(estadoPedidos.estado === 'carregando'){ lista.textContent = t('carregando'); return; }
+  if(estadoPedidos.estado === 'erro'){ lista.textContent = t('pedErro'); return; }
+
+  const pedidos = agruparPedidos(estadoPedidos.itens);
+  const abertos = pedidos.filter(p => p.itens.some(i => i.status === 'Pendente'));
+  const resolvidos = pedidos.filter(p => !p.itens.some(i => i.status === 'Pendente')).slice(0, 10);
+
+  if(abertos.length > 0){ badge.textContent = abertos.length; badge.style.display = 'inline-block'; }
+  else { badge.style.display = 'none'; }
+
+  const rolagem = lista.scrollTop;
+  lista.innerHTML = '';
+  if(pedidos.length === 0){ lista.textContent = t('pedVazio'); return; }
+
+  abertos.forEach(p => lista.appendChild(criarCartaoPedido(p)));
+  if(resolvidos.length > 0){
+    const titulo = document.createElement('div');
+    titulo.className = 'subtitulo-lista';
+    titulo.textContent = t('pedResolvidos');
+    lista.appendChild(titulo);
+    resolvidos.forEach(p => lista.appendChild(criarCartaoPedido(p)));
+  }
+  lista.scrollTop = rolagem;
+}
+
+function botoesDeStatus(){
+  return `
+    <button class="btn-atendido" data-status="Atendido" title="${esc(t('tituloAtendido'))}">${esc(t('btnAtendido'))}</button>
+    <button class="btn-fabrica" data-status="Pedido à fábrica" title="${esc(t('tituloFabrica'))}">${esc(t('btnFabrica'))}</button>
+    <button class="btn-cancelar-pedido" data-status="Cancelado" title="${esc(t('tituloCancelarPedido'))}">${esc(t('btnCancelarPedido'))}</button>`;
+}
+
+function criarCartaoPedido(pedido){
+  const pendentes = pedido.itens.filter(i => i.status === 'Pendente');
   const div = document.createElement('div');
-  div.className = 'item-pedido';
-  const st = traducaoStatus[p.status] || { texto: p.status, classe: '' };
-  const dataHora = p.dataSolicitacao ? new Date(p.dataSolicitacao).toLocaleString('pt-BR') : '';
+  div.className = 'pedido';
+  div.dataset.pedido = pedido.pedidoId;
 
   div.innerHTML = `
-    <div class="item-pedido-topo">
-      <div>
-        <div class="item-pedido-produto">${p.produtoJp}（${p.produto}）・${p.tamanho} × ${p.quantidade}</div>
-        <div class="item-pedido-sub">従業員 / Funcionário: <strong>${p.funcionario}</strong></div>
-        <div class="item-pedido-sub">依頼者 / Solicitante: ${p.solicitante} — ${dataHora}</div>
+    <div class="pedido-cabecalho">
+      <div class="pedido-funcionario">👤 ${esc(pedido.funcionario)}</div>
+      <div class="pedido-sub">${esc(t('solicitante'))}: ${esc(pedido.solicitante)} — ${esc(dataHoraLocal(pedido.dataSolicitacao))}</div>
+      ${pendentes.length > 1 ? `<div class="pedido-em-lote"><span class="rotulo-lote">${esc(t('loteRotulo'))}</span>${botoesDeStatus()}</div>` : ''}
+    </div>`;
+
+  pedido.itens.forEach(item => {
+    const linha = document.createElement('div');
+    linha.className = 'pedido-item';
+    linha.innerHTML = `
+      <div class="pedido-item-topo">
+        <div class="pedido-item-nome">${esc(rotuloProduto(item.produto, item.produtoJp))} ・ ${esc(item.tamanho)} × ${esc(item.quantidade)}</div>
+        <span class="status-badge ${classeStatus(item.status)}">${esc(textoStatus(item.status))}</span>
       </div>
-      <span class="status-badge ${st.classe}" title="${p.status}">${st.texto}</span>
-    </div>
-  `;
+      ${item.status === 'Pendente' ? `<div class="pedido-acoes">${botoesDeStatus()}</div>` : ''}`;
+    if(item.status === 'Pendente'){
+      linha.querySelectorAll('.pedido-acoes button').forEach(b => {
+        b.addEventListener('click', () => atualizarStatusPedido({ itens:[item], id:item.id }, b.dataset.status, div));
+      });
+    }
+    div.appendChild(linha);
+  });
 
-  if(comAcoes){
-    const acoes = document.createElement('div');
-    acoes.className = 'item-pedido-acoes';
-    acoes.innerHTML = `
-      <button class="btn-pedido-atendido" title="Atendido (desconta do estoque)">✅ 対応済み</button>
-      <button class="btn-pedido-fabrica" title="Pedido à fábrica (não desconta do estoque)">🏭 工場へ</button>
-      <button class="btn-pedido-cancelar" title="Cancelar pedido">❌ 取消</button>
-    `;
-    acoes.querySelector('.btn-pedido-atendido').addEventListener('click', () => atualizarStatusPedido(p.id, 'Atendido', acoes));
-    acoes.querySelector('.btn-pedido-fabrica').addEventListener('click', () => atualizarStatusPedido(p.id, 'Pedido à fábrica', acoes));
-    acoes.querySelector('.btn-pedido-cancelar').addEventListener('click', () => atualizarStatusPedido(p.id, 'Cancelado', acoes));
-    div.appendChild(acoes);
-  }
-
+  div.querySelectorAll('.pedido-em-lote button').forEach(b => {
+    b.addEventListener('click', () => atualizarStatusPedido({ itens:pendentes, pedidoId:pedido.pedidoId }, b.dataset.status, div));
+  });
   return div;
 }
 
-async function atualizarStatusPedido(id, novoStatus, acoesEl){
-  acoesEl.querySelectorAll('button').forEach(b => b.disabled = true);
+// Itens cujo pedido é maior do que o que há em estoque agora
+function itensSemEstoque(itens){
+  const necessario = {};
+  itens.forEach(i => { const k = i.produtoId + '_' + i.tamanho; necessario[k] = (necessario[k] || 0) + i.quantidade; });
+  const faltas = [];
+  Object.keys(necessario).forEach(k => {
+    if(estoqueMap[k] === undefined) return; // estoque ainda não carregado: não dá para avisar
+    if(estoqueMap[k] < necessario[k]){
+      const item = itens.find(i => (i.produtoId + '_' + i.tamanho) === k);
+      faltas.push(t('linhaFalta', { nome: rotuloProduto(item.produto, item.produtoJp), tam: item.tamanho, estoque: estoqueMap[k], qtd: necessario[k] }));
+    }
+  });
+  return faltas;
+}
+
+async function atualizarStatusPedido(alvo, novoStatus, cartao){
+  if(novoStatus === 'Atendido'){
+    const faltas = itensSemEstoque(alvo.itens);
+    if(faltas.length > 0 && !window.confirm(t('confirmaSemEstoque', { lista: faltas.join('\n') }))) return;
+  }
+  cartao.querySelectorAll('button').forEach(b => { b.disabled = true; });
+
+  if(alvo.pedidoId) await postar({ action:'atualizarPedido', pedidoId: alvo.pedidoId, novoStatus });
+  else await postar({ action:'atualizarSolicitacao', id: alvo.id, novoStatus });
+
+  setTimeout(() => {
+    carregarPedidos();
+    if(novoStatus === 'Atendido') carregarEstoqueAtual(true);
+  }, 1200);
+}
+
+/* =========================================================================
+   RELATÓRIO DE MOVIMENTAÇÃO (por mês / por ano)
+   ========================================================================= */
+function opcoesAnos(){
+  const atual = new Date().getFullYear();
+  const inicio = Math.min(2026, atual);
+  const anos = [];
+  for(let a = atual; a >= inicio; a--) anos.push(a);
+  return anos;
+}
+function nomeDoMes(m){
+  return new Date(2000, m - 1, 1).toLocaleString(loc(), { month:'long' });
+}
+
+function abrirRelatorio(){
+  const agora = new Date();
+  if(!relatorio.ano){ relatorio.ano = agora.getFullYear(); relatorio.mes = agora.getMonth() + 1; }
+  relatorio.aberto = true;
+  $('modalRelatorio').classList.add('aberto');
+  $('fundoEscurecido').classList.add('ativo');
+  carregarMovimentos();
+}
+function fecharRelatorio(){
+  relatorio.aberto = false;
+  $('modalRelatorio').classList.remove('aberto');
+  $('fundoEscurecido').classList.remove('ativo');
+}
+
+async function carregarMovimentos(){
+  const ano = relatorio.ano;
+  relatorio.carregando = true;
+  relatorio.erro = false;
+  renderRelatorio();
   try{
-    await fetch(CONFIG.scriptUrl, {
-      method:'POST',
-      mode:'no-cors',
-      headers:{ 'Content-Type':'text/plain' },
-      body: JSON.stringify({ action:'atualizarSolicitacao', id, novoStatus, usuario: obterUsuario() })
-    });
+    const dados = await buscarJson('movimentos', '&ano=' + ano);
+    // um Apps Script antigo devolve a lista do estoque no lugar dos movimentos
+    if(dados.some(m => typeof m.delta !== 'number' || typeof m.mes !== 'number')) throw new Error('resposta de versão antiga');
+    if(ano !== relatorio.ano) return; // a pessoa já trocou de ano: ignora esta resposta
+    relatorio.dados = dados;
   }catch(erro){
     console.error(erro);
-  }finally{
-    setTimeout(() => {
-      carregarPedidos();
-      if(novoStatus === 'Atendido') carregarEstoqueAtual(true);
-    }, 1200);
+    if(ano !== relatorio.ano) return;
+    relatorio.dados = [];
+    relatorio.erro = true;
   }
+  relatorio.carregando = false;
+  renderRelatorio();
+}
+
+function movimentosFiltrados(incluirMes){
+  return relatorio.dados.filter(m =>
+    (!incluirMes || relatorio.modo === 'anual' || m.mes === relatorio.mes) &&
+    (relatorio.usuario === 'todos' || m.usuario === relatorio.usuario));
+}
+
+function ordemProduto(nomePt){
+  const i = produtos.findIndex(p => p.nome === nomePt);
+  return i === -1 ? 999 : i;
+}
+function ordemTamanho(nomePt, tam){
+  const p = produtoPorNomePt[nomePt];
+  const i = p ? p.tamanhos.indexOf(tam) : -1;
+  return i === -1 ? 999 : i;
+}
+
+function resumirMovimentos(lista){
+  let entradas = 0, saidas = 0;
+  const porProduto = {};
+  lista.forEach(m => {
+    const entrou = m.delta > 0 ? m.delta : 0;
+    const saiu = m.delta < 0 ? -m.delta : 0;
+    entradas += entrou; saidas += saiu;
+    const p = porProduto[m.produto] || (porProduto[m.produto] = { nome:m.produto, entradas:0, saidas:0, tamanhos:{} });
+    p.entradas += entrou; p.saidas += saiu;
+    const tm = p.tamanhos[m.tamanho] || (p.tamanhos[m.tamanho] = { entradas:0, saidas:0 });
+    tm.entradas += entrou; tm.saidas += saiu;
+  });
+  const produtosOrdenados = Object.keys(porProduto)
+    .sort((a, b) => ordemProduto(a) - ordemProduto(b) || a.localeCompare(b))
+    .map(k => porProduto[k]);
+  return { entradas, saidas, saldo: entradas - saidas, total: lista.length, produtos: produtosOrdenados };
+}
+
+function sinal(n){ return n > 0 ? '+' + n : n < 0 ? '−' + Math.abs(n) : '0'; }
+function classeSinal(n){ return n > 0 ? 'pos' : n < 0 ? 'neg' : 'neutro'; }
+
+function formatarDataHoraRelatorio(texto){
+  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(texto || '');
+  if(!m) return texto || '';
+  return idioma === 'ja' ? `${m[1]}/${m[2]}/${m[3]} ${m[4]}:${m[5]}` : `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}`;
+}
+
+function rotuloTipo(m){
+  if(m.acao === 'definir') return t('tipoAjuste');
+  return m.delta > 0 ? t('tipoEntrada') : t('tipoSaida');
+}
+
+function renderRelatorio(){
+  const r = relatorio;
+  $('relModoMensal').classList.toggle('ativo', r.modo === 'mensal');
+  $('relModoAnual').classList.toggle('ativo', r.modo === 'anual');
+  $('relGrupoMes').classList.toggle('oculto', r.modo !== 'mensal');
+
+  $('relAno').innerHTML = opcoesAnos().map(a => `<option value="${a}"${a === r.ano ? ' selected' : ''}>${a}</option>`).join('');
+  let optMes = '';
+  for(let m = 1; m <= 12; m++) optMes += `<option value="${m}"${m === r.mes ? ' selected' : ''}>${esc(nomeDoMes(m))}</option>`;
+  $('relMes').innerHTML = optMes;
+
+  const usuarios = Array.from(new Set(r.dados.map(m => m.usuario))).sort((a, b) => a.localeCompare(b, loc()));
+  if(r.usuario !== 'todos' && usuarios.indexOf(r.usuario) === -1) r.usuario = 'todos';
+  $('relUsuario').innerHTML = `<option value="todos">${esc(t('relTodos'))}</option>` +
+    usuarios.map(u => `<option value="${esc(u)}"${u === r.usuario ? ' selected' : ''}>${esc(u)}</option>`).join('');
+
+  const corpo = $('relCorpo');
+  if(r.carregando){ corpo.textContent = t('carregando'); return; }
+  if(r.erro){ corpo.innerHTML = `<div class="rel-vazio">${esc(t('relErro'))}</div>`; return; }
+
+  const periodo = movimentosFiltrados(true);
+  const resumo = resumirMovimentos(periodo);
+
+  let html = `
+    <div class="rel-cards">
+      <div class="rel-card"><div class="rotulo">${esc(t('relEntradas'))}</div><div class="numero pos">${sinal(resumo.entradas)}</div></div>
+      <div class="rel-card"><div class="rotulo">${esc(t('relSaidas'))}</div><div class="numero neg">${resumo.saidas ? '−' + resumo.saidas : '0'}</div></div>
+      <div class="rel-card"><div class="rotulo">${esc(t('relSaldo'))}</div><div class="numero ${classeSinal(resumo.saldo)}">${sinal(resumo.saldo)}</div><div class="sub">${esc(t('relMovimentos', { n: resumo.total }))}</div></div>
+    </div>`;
+
+  if(r.modo === 'anual'){
+    const doAno = movimentosFiltrados(false);
+    const meses = [];
+    for(let m = 1; m <= 12; m++) meses.push({ entradas:0, saidas:0 });
+    doAno.forEach(mv => {
+      if(mv.mes >= 1 && mv.mes <= 12){
+        if(mv.delta > 0) meses[mv.mes - 1].entradas += mv.delta; else meses[mv.mes - 1].saidas += -mv.delta;
+      }
+    });
+    html += `<div class="rel-secao">${esc(t('relPorMes'))}</div><div class="rel-rolagem"><table class="rel-tabela">
+      <thead><tr><th>${esc(t('relColMes'))}</th><th class="num">${esc(t('relEntradas'))}</th><th class="num">${esc(t('relSaidas'))}</th><th class="num">${esc(t('relSaldo'))}</th></tr></thead><tbody>`;
+    meses.forEach((x, i) => {
+      const saldo = x.entradas - x.saidas;
+      html += `<tr><td>${esc(nomeDoMes(i + 1))}</td><td class="num pos">${x.entradas ? '+' + x.entradas : '0'}</td><td class="num neg">${x.saidas ? '−' + x.saidas : '0'}</td><td class="num ${classeSinal(saldo)}">${sinal(saldo)}</td></tr>`;
+    });
+    html += `<tr class="linha-total"><td>${esc(t('relTotal'))}</td><td class="num pos">${sinal(resumo.entradas)}</td><td class="num neg">${resumo.saidas ? '−' + resumo.saidas : '0'}</td><td class="num ${classeSinal(resumo.saldo)}">${sinal(resumo.saldo)}</td></tr>`;
+    html += `</tbody></table></div>`;
+  }
+
+  if(resumo.total === 0){
+    html += `<div class="rel-vazio">${esc(t('relVazio'))}</div>`;
+  }else{
+    html += `<div class="rel-secao">${esc(t('relPorProduto'))}</div><div class="rel-rolagem"><table class="rel-tabela">
+      <thead><tr><th>${esc(t('relColProduto'))}</th><th class="num">${esc(t('relEntradas'))}</th><th class="num">${esc(t('relSaidas'))}</th><th class="num">${esc(t('relSaldo'))}</th></tr></thead><tbody>`;
+    resumo.produtos.forEach(p => {
+      const saldo = p.entradas - p.saidas;
+      html += `<tr class="linha-produto"><td>${esc(rotuloProduto(p.nome))}</td><td class="num pos">${p.entradas ? '+' + p.entradas : '0'}</td><td class="num neg">${p.saidas ? '−' + p.saidas : '0'}</td><td class="num ${classeSinal(saldo)}">${sinal(saldo)}</td></tr>`;
+      Object.keys(p.tamanhos).sort((a, b) => ordemTamanho(p.nome, a) - ordemTamanho(p.nome, b)).forEach(tam => {
+        const x = p.tamanhos[tam], s = x.entradas - x.saidas;
+        html += `<tr class="linha-tam"><td>${esc(t('tamAbrev'))} ${esc(tam)}</td><td class="num">${x.entradas ? '+' + x.entradas : '0'}</td><td class="num">${x.saidas ? '−' + x.saidas : '0'}</td><td class="num">${sinal(s)}</td></tr>`;
+      });
+    });
+    html += `</tbody></table></div>`;
+
+    const detalhe = periodo.slice().sort((a, b) => a.dataHora < b.dataHora ? 1 : a.dataHora > b.dataHora ? -1 : 0);
+    const mostrados = detalhe.slice(0, CONFIG.limiteDetalheRelatorio);
+    html += `<div class="rel-secao">${esc(t('relDetalhe'))}</div><div class="rel-rolagem"><table class="rel-tabela">
+      <thead><tr><th>${esc(t('relColQuando'))}</th><th>${esc(t('relColQuem'))}</th><th>${esc(t('relColProduto'))}</th><th>${esc(t('relColTam'))}</th><th>${esc(t('relColTipo'))}</th><th class="num">${esc(t('relColQtd'))}</th><th>${esc(t('relColPara'))}</th></tr></thead><tbody>`;
+    mostrados.forEach(m => {
+      html += `<tr><td>${esc(formatarDataHoraRelatorio(m.dataHora))}</td><td>${esc(m.usuario)}</td><td>${esc(rotuloProduto(m.produto))}</td><td>${esc(m.tamanho)}</td><td>${esc(rotuloTipo(m))}</td><td class="num ${classeSinal(m.delta)}">${sinal(m.delta)}</td><td>${m.funcionario ? '👤 ' + esc(m.funcionario) : '—'}</td></tr>`;
+    });
+    html += `</tbody></table></div>`;
+    if(detalhe.length > mostrados.length) html += `<p class="rel-nota">${esc(t('relLimite', { n: mostrados.length }))}</p>`;
+  }
+
+  html += `<p class="rel-nota">${esc(t('relNota'))}</p>`;
+  corpo.innerHTML = html;
+}
+
+// CSV para abrir no Excel / Google Sheets (UTF-8 com BOM para o japonês aparecer certo)
+function celulaCsv(valor, texto){
+  let s = String(valor == null ? '' : valor);
+  if(texto && /^[=+\-@\t\r]/.test(s)) s = "'" + s; // evita que o Excel trate texto como fórmula
+  return '"' + s.replace(/"/g, '""') + '"';
+}
+function montarCsv(lista){
+  const ordenada = lista.slice().sort((a, b) => a.dataHora < b.dataHora ? 1 : a.dataHora > b.dataHora ? -1 : 0);
+  const cabecalho = [t('relColQuando'), t('relColQuem'), t('relColProduto'), 'ProdutoJP', t('relColTam'), t('relColTipo'), t('relColQtd'), t('relColPara'), t('relColAntes'), t('relColDepois')];
+  const linhas = [cabecalho.map(c => celulaCsv(c)).join(',')];
+  ordenada.forEach(m => {
+    const jp = produtoPorNomePt[m.produto] ? produtoPorNomePt[m.produto].nomeJp : '';
+    linhas.push([
+      celulaCsv(m.dataHora), celulaCsv(m.usuario, true), celulaCsv(m.produto, true), celulaCsv(jp, true),
+      celulaCsv(m.tamanho, true), celulaCsv(rotuloTipo(m)), celulaCsv(m.delta),
+      celulaCsv(m.funcionario, true), celulaCsv(m.quantidadeAnterior), celulaCsv(m.quantidadeNova)
+    ].join(','));
+  });
+  return '﻿' + linhas.join('\r\n');
+}
+function exportarCsv(){
+  const lista = movimentosFiltrados(true);
+  const blob = new Blob([montarCsv(lista)], { type:'text/csv;charset=utf-8' });
+  const periodo = relatorio.modo === 'mensal' ? relatorio.ano + '-' + String(relatorio.mes).padStart(2, '0') : String(relatorio.ano);
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'estoque-movimentos-' + periodo + '.csv';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 2000);
 }
 
 /* =========================================================================
    INICIALIZAÇÃO
    ========================================================================= */
-function iniciar(){
-  document.getElementById('btnTrocarNome').addEventListener('click', trocarUsuario);
-  document.getElementById('busca').addEventListener('input', aplicarFiltros);
-  iniciarSeletorModo();
+function fecharTudo(){
+  $('painelHistorico').classList.remove('aberto');
+  $('painelPedidos').classList.remove('aberto');
+  if(relatorio.aberto) relatorio.aberto = false;
+  $('modalRelatorio').classList.remove('aberto');
+  $('modalSolicitar').classList.remove('aberto');
+  $('fundoEscurecido').classList.remove('ativo');
+}
 
-  document.getElementById('btnConfirmarNome').addEventListener('click', confirmarNome);
-  document.getElementById('btnCancelarNome').addEventListener('click', cancelarNome);
-  const inputNome = document.getElementById('inputNomeUsuario');
+function iniciar(){
+  let idiomaSalvo = 'ja';
+  try{ idiomaSalvo = localStorage.getItem('estoqueUniformesIdioma') || 'ja'; }catch(e){}
+
+  montarAbas();
+  montarCards();
+  iniciarSeletorModo();
+  aplicarIdioma(idiomaSalvo);
+  definirStatus('carregando');
+
+  $('seletorIdioma').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if(btn) aplicarIdioma(btn.dataset.idioma);
+  });
+  $('btnTrocarNome').addEventListener('click', () => abrirModalNome(false, obterUsuario()));
+  $('busca').addEventListener('input', aplicarFiltros);
+
+  $('btnConfirmarNome').addEventListener('click', confirmarNome);
+  $('btnCancelarNome').addEventListener('click', fecharModalNome);
+  const inputNome = $('inputNomeUsuario');
   inputNome.addEventListener('keydown', e => { if(e.key === 'Enter') confirmarNome(); });
   inputNome.addEventListener('input', () => {
     inputNome.classList.remove('campo-invalido');
-    document.getElementById('erroNomeUsuario').classList.remove('visivel');
+    $('erroNomeUsuario').classList.remove('visivel');
   });
 
-  const nomeExistente = localStorage.getItem('estoqueUniformesUsuario');
-  document.getElementById('nomeUsuarioAtual').textContent = nomeExistente || '—';
+  let nomeExistente = null;
+  try{ nomeExistente = localStorage.getItem('estoqueUniformesUsuario'); }catch(e){}
+  $('nomeUsuarioAtual').textContent = nomeExistente || '—';
   if(!nomeExistente){
     // Obrigatório: sem botão de cancelar, a caixa fica aberta até digitar algo
     abrirModalNome(true, '');
   }
 
-  montarAbas();
-  montarCards();
-
-  const painel = document.getElementById('painelHistorico');
-  const fundo = document.getElementById('fundoEscurecido');
-  document.getElementById('btnHistorico').addEventListener('click', () => {
-    painel.classList.add('aberto'); fundo.classList.add('ativo'); carregarHistorico();
+  // histórico
+  $('btnHistorico').addEventListener('click', () => {
+    $('painelHistorico').classList.add('aberto');
+    $('fundoEscurecido').classList.add('ativo');
+    carregarHistorico();
   });
-  const fechar = () => {
-    painel.classList.remove('aberto');
-    document.getElementById('painelPedidos').classList.remove('aberto');
-    document.getElementById('modalSolicitar').classList.remove('aberto');
-    fundo.classList.remove('ativo');
-  };
-  document.getElementById('fecharHistorico').addEventListener('click', fechar);
-  fundo.addEventListener('click', fechar);
+  $('fecharHistorico').addEventListener('click', fecharTudo);
 
-  popularSelectProdutoSolicitar();
-  document.getElementById('selectProdutoSolicitar').addEventListener('change', popularSelectTamanhoSolicitar);
-  document.getElementById('btnSolicitar').addEventListener('click', abrirModalSolicitar);
-  document.getElementById('btnCancelarSolicitar').addEventListener('click', fecharModalSolicitar);
-  document.getElementById('btnEnviarSolicitar').addEventListener('click', enviarSolicitacao);
+  // pedido com vários itens
+  $('btnSolicitar').addEventListener('click', abrirModalSolicitar);
+  $('btnCancelarSolicitar').addEventListener('click', fecharModalSolicitar);
+  $('btnEnviarSolicitar').addEventListener('click', enviarSolicitacao);
+  $('btnAdicionarItem').addEventListener('click', () => {
+    itensSolicitar.push(novoItemSolicitar());
+    renderItensSolicitar();
+    const caixas = document.querySelectorAll('#listaItensSolicitar .linha-item-solicitar');
+    if(caixas.length) caixas[caixas.length - 1].scrollIntoView({ block:'nearest' });
+  });
 
-  document.getElementById('btnPendentes').addEventListener('click', abrirPainelPedidos);
-  document.getElementById('fecharPedidos').addEventListener('click', fecharPainelPedidos);
+  // lista de pedidos
+  $('btnPendentes').addEventListener('click', abrirPainelPedidos);
+  $('fecharPedidos').addEventListener('click', fecharPainelPedidos);
 
+  // relatório
+  $('btnRelatorio').addEventListener('click', abrirRelatorio);
+  $('fecharRelatorio').addEventListener('click', fecharRelatorio);
+  $('relModoMensal').addEventListener('click', () => { relatorio.modo = 'mensal'; renderRelatorio(); });
+  $('relModoAnual').addEventListener('click', () => { relatorio.modo = 'anual'; renderRelatorio(); });
+  $('relAno').addEventListener('change', e => { relatorio.ano = parseInt(e.target.value, 10); carregarMovimentos(); });
+  $('relMes').addEventListener('change', e => { relatorio.mes = parseInt(e.target.value, 10); renderRelatorio(); });
+  $('relUsuario').addEventListener('change', e => { relatorio.usuario = e.target.value; renderRelatorio(); });
+  $('btnCsv').addEventListener('click', exportarCsv);
+
+  // clicar fora fecha os painéis, mas NÃO o pedido em preenchimento (para não perder a lista digitada)
+  $('fundoEscurecido').addEventListener('click', () => {
+    if($('modalSolicitar').classList.contains('aberto')) return;
+    fecharTudo();
+  });
+  document.addEventListener('keydown', e => {
+    if(e.key !== 'Escape') return;
+    if($('modalNome').classList.contains('aberto') && $('btnCancelarNome').style.display === 'none') return;
+    if($('modalNome').classList.contains('aberto')) { fecharModalNome(); return; }
+    if($('modalSolicitar').classList.contains('aberto')) { fecharModalSolicitar(); return; }
+    fecharTudo();
+  });
+
+  verificarVersaoBackend();
   carregarEstoqueAtual();
   carregarPedidos();
-  setInterval(() => { carregarEstoqueAtual(true); carregarPedidos(); }, CONFIG.intervaloAtualizacaoMs);
+  setInterval(() => {
+    carregarEstoqueAtual(true);
+    carregarPedidos();
+  }, CONFIG.intervaloAtualizacaoMs);
 }
 
 document.addEventListener('DOMContentLoaded', iniciar);
