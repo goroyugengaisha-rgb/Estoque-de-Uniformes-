@@ -235,6 +235,8 @@
   .status-badge.atendido{background:#e3f3e9;color:var(--green);}
   .status-badge.fabrica{background:#e4edf5;color:var(--navy);}
   .status-badge.cancelado{background:#f1eee3;color:var(--text-soft);}
+  .status-badge.recebido{background:#dff1f1;color:#1f6f73;}
+  .status-badge.devolvido{background:#f6e4e4;color:var(--red);}
   .pedido-acoes{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
   .pedido-acoes button, .pedido-em-lote button{
     flex:1;min-width:84px;border:none;border-radius:6px;padding:7px 6px;font-size:.76rem;
@@ -244,6 +246,10 @@
   .btn-atendido{background:var(--green);}
   .btn-fabrica{background:var(--navy);}
   .btn-cancelar-pedido{background:var(--red);}
+  .btn-receber-estoque{background:#1f6f73;}
+  .btn-receber-direto{background:#5a6b86;}
+  .btn-devolver{background:#8a5a2b;}
+  .pedido-item-nota{font-size:.74rem;color:var(--text-soft);margin-top:4px;line-height:1.5;}
   .subtitulo-lista{margin:14px 0 8px;font-size:.82rem;color:var(--text-soft);}
 
   /* ---------- janelas (nome, pedido, relatório) ---------- */
@@ -275,6 +281,9 @@
   .btn-modal-primario:disabled{opacity:.6;cursor:not-allowed;}
   .btn-modal-secundario{background:#f1eee3;color:var(--text);}
   #fundoNome{z-index:30;}
+  .modal-devolver{width:min(440px,94vw);}
+  .dev-resumo{font-size:.9rem;font-weight:600;margin:6px 0 0;line-height:1.5;}
+  .modal-nome-botoes.quebra{flex-wrap:wrap;}
   .modal-grande{max-height:88vh;overflow-y:auto;}
 
   .rotulo-campo{display:block;font-size:.76rem;font-weight:700;color:var(--text-soft);margin:12px 0 4px;}
@@ -317,6 +326,7 @@
     border-radius:20px;font-size:.85rem;font-weight:700;cursor:pointer;
   }
   .rel-modos button.ativo{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .btn-csv.segundo{margin-left:0;}
   .btn-csv{
     margin-left:auto;border:1px solid var(--border);background:#fff;color:var(--navy);
     padding:8px 14px;border-radius:20px;font-size:.85rem;font-weight:700;cursor:pointer;
@@ -346,6 +356,7 @@
   .rel-tabela .linha-total td{font-weight:700;background:#faf9f5;border-top:2px solid var(--border);}
   .rel-nota{font-size:.74rem;color:var(--text-soft);margin-top:14px;line-height:1.5;}
   .rel-vazio{padding:22px;text-align:center;color:var(--text-soft);}
+  .rel-fab-resumo{font-size:.84rem;margin:0 0 8px;line-height:1.6;}
 
   .toast{
     position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--navy-dark);color:#fff;
@@ -412,6 +423,7 @@
 <div class="modal-nome modal-grande modal-solicitar" id="modalSolicitar" role="dialog" aria-modal="true">
   <h3 data-i18n="solTitulo"></h3>
   <p class="modal-nome-sub" data-i18n="solSub"></p>
+  <p class="modal-nome-explicacao" id="solicitarDica" style="display:none;font-weight:700;color:var(--amber);"></p>
 
   <label class="rotulo-campo" for="inputFuncionarioSolicitar" data-i18n="solLblFuncionario"></label>
   <input type="text" id="inputFuncionarioSolicitar" data-i18n-ph="solPhFuncionario" autocomplete="off" maxlength="80">
@@ -427,6 +439,26 @@
   <div class="modal-nome-botoes">
     <button id="btnCancelarSolicitar" class="btn-modal-secundario" data-i18n="cancelar"></button>
     <button id="btnEnviarSolicitar" class="btn-modal-primario" data-i18n="solEnviar"></button>
+  </div>
+</div>
+
+<!-- Devolução de um item já entregue -->
+<div class="modal-nome modal-devolver" id="modalDevolver" role="dialog" aria-modal="true">
+  <h3 data-i18n="devTitulo"></h3>
+  <p class="modal-nome-sub" data-i18n="devSub"></p>
+  <p class="dev-resumo" id="devResumo"></p>
+
+  <label class="rotulo-campo" for="devQuantidade" id="devLblQtd"></label>
+  <input type="number" id="devQuantidade" min="1" step="1">
+
+  <label class="rotulo-campo" for="devObs" data-i18n="devLblObs"></label>
+  <input type="text" id="devObs" data-i18n-ph="devPhObs" maxlength="80" autocomplete="off">
+
+  <div class="modal-nome-erro" id="erroDevolver"></div>
+  <div class="modal-nome-botoes quebra">
+    <button id="btnCancelarDevolver" class="btn-modal-secundario" data-i18n="cancelar"></button>
+    <button id="btnDevolverApenas" class="btn-modal-primario" data-i18n="devApenas"></button>
+    <button id="btnDevolverTroca" class="btn-modal-primario" data-i18n="devTroca"></button>
   </div>
 </div>
 
@@ -458,6 +490,7 @@
       <select id="relUsuario"></select>
     </div>
     <button class="btn-csv" id="btnCsv" data-i18n="relCsv"></button>
+    <button class="btn-csv segundo" id="btnCsvFabrica" data-i18n="relCsvFabrica"></button>
   </div>
 
   <div id="relCorpo"></div>
@@ -491,10 +524,10 @@
    ========================================================================= */
 const CONFIG = {
   // Cole aqui a URL do seu Google Apps Script (termina em /exec)
-  scriptUrl: "https://script.google.com/macros/s/AKfycbypQzaGVn6_ynz0CZvov6t_RRF6KzFx-R2RF1AWJu1AlMX7XNf2BRvrKysu-qtvjxFd/exec",
+  scriptUrl: "COLE_AQUI_A_URL_DO_SEU_GOOGLE_APPS_SCRIPT",
   intervaloAtualizacaoMs: 20000, // atualiza sozinho a cada 20s
   estoqueBaixo: 2,               // até esta quantidade o estoque aparece como "baixo"
-  versaoBackendMinima: 3,        // versão mínima do Apps Script (VERSAO_BACKEND no .gs)
+  versaoBackendMinima: 4,        // versão mínima do Apps Script (VERSAO_BACKEND no .gs)
   limiteDetalheRelatorio: 300    // linhas do detalhe mostradas na tela (o CSV leva todas)
 };
 
@@ -541,9 +574,25 @@ const TXT = {
     pedResolvidos: '最近対応済み',
     funcionario: '従業員', solicitante: '依頼者',
     statusPendente: '保留中', statusAtendido: '対応済み', statusFabrica: '工場へ発注', statusCancelado: 'キャンセル済み',
+    statusRecebido: '入荷済み（事務所）', statusDevolvido: '返品済み',
     btnAtendido: '✅ 対応済み', btnFabrica: '🏭 工場へ', btnCancelarPedido: '❌ 取消',
     tituloAtendido: '対応済みにして在庫から引く', tituloFabrica: '工場へ発注（事務所の在庫は減りません）', tituloCancelarPedido: '依頼を取り消す',
-    loteRotulo: '全件：',
+    loteRotuloStatus: '全件（{s}）：',
+    btnReceberEstoque: '📦 事務所の在庫へ', tituloReceberEstoque: '工場から届いた：事務所の在庫に加える',
+    btnReceberDireto: '🚚 従業員へ直接', tituloReceberDireto: '工場から届き、そのまま従業員へ渡した（在庫は変わりません）',
+    btnDevolver: '↩️ 返品', tituloDevolver: '従業員が返品した：数量を事務所の在庫に戻す',
+    notaFabrica: '🏭 工場へ発注：{d}',
+    notaRecebidoEstoque: '📦 入荷：{d} → 事務所の在庫',
+    notaRecebidoDireto: '🚚 入荷：{d} → 従業員へ直接',
+    devTitulo: '返品の登録',
+    devSub: '返品された数量は事務所の在庫に戻ります。',
+    devLblQtd: '返品する数量', devMax: '（最大 {n}）',
+    devLblObs: 'メモ（任意）', devPhObs: '例：サイズが合わなかった',
+    devApenas: '返品する', devTroca: '返品して交換を依頼',
+    erroDevQtd: '⚠️ 数量は1〜{n}の整数にしてください。',
+    toastDevolvido: '✅ 返品を登録しました（在庫に戻しました）',
+    toastRecebido: '✅ 入荷を登録しました',
+    solDicaTroca: '交換の依頼です：新しいサイズ（または商品）を選んで送信してください。',
     confirmaSemEstoque: '在庫が足りない商品があります：\n{lista}\n\nそれでも対応済みにしますか？',
     linhaFalta: '{nome} {tam}：在庫 {estoque} / 依頼 {qtd}',
     solTitulo: '制服を依頼する',
@@ -572,12 +621,22 @@ const TXT = {
     relColProduto: '商品', relColMes: '月', relColQuando: '日時', relColQuem: '担当者', relColTam: 'サイズ',
     relColTipo: '種別', relColQtd: '数量', relColPara: '従業員', relColAntes: '前', relColDepois: '後',
     relTotal: '合計',
-    tipoEntrada: '入庫', tipoSaida: '出庫', tipoAjuste: '調整',
+    tipoEntrada: '入庫（手動）', tipoSaida: '出庫（手動）', tipoAjuste: '調整（手動）',
+    tipoFabrica: '工場から入荷', tipoEntrega: '従業員へ渡した', tipoDevolucao: '返品', tipoManual: '手動の入出庫・調整',
+    relPorTipo: '種別ごとの内訳', relColMov: '件数',
+    relFabricaTitulo: '工場発注',
+    relFabricaResumo: '発注 {n} 件（{q} 個）・待ち {w}・事務所の在庫へ入荷 {e}・従業員へ直接 {d}・キャンセル {c}',
+    relFabricaVazio: 'この期間の工場発注はありません。',
+    relFabricaErro: '工場発注を読み込めませんでした。',
+    relColEnviado: '発注日', relColRecebido: '入荷日', relColSituacao: '状況',
+    fabAguardando: '工場からの入荷待ち', fabEstoque: '入荷済み → 事務所の在庫', fabDireto: '入荷済み → 従業員へ直接', fabCancelado: 'キャンセル',
+    relCsvFabrica: '⬇ 工場発注CSV',
     relVazio: 'この期間の入出庫はありません。',
     relErro: 'レポートを読み込めませんでした。',
-    avisoVersao: '⚠️ Apps Script の公開バージョンが古いままです。Apps Script の「Implantar > Gerenciar implantações」から新しいバージョンを公開してください。それまでレポートと複数商品の依頼は正しく動きません。',
+    avisoVersao: '⚠️ Apps Script の公開バージョンが古いままです。Apps Script の「Implantar > Gerenciar implantações」から新しいバージョンを公開してください。それまでレポート・複数商品の依頼・入荷／返品の機能は正しく動きません。',
     relLimite: '※ 最新 {n} 件を表示しています。全件はCSV出力で確認できます。',
-    relNota: '※ このシステムから行った操作のみ集計されます（スプレッドシートを直接編集した分は含まれません）。数量の直接設定は、増減の差分を入庫／出庫として集計します。'
+    relNota: '※ このシステムから行った操作のみ集計されます（スプレッドシートを直接編集した分は含まれません）。数量の直接設定は、増減の差分を入庫／出庫として集計します。',
+    relNotaFabrica: '※ 工場発注は「工場へ発注」にした日で集計します。担当者の絞り込みは入出庫の集計にだけ適用されます。従業員へ直接渡した入荷は在庫を通らないため、入出庫の集計には入りません。'
   },
   pt: {
     tituloPagina: 'Controle de Estoque de Uniformes',
@@ -617,9 +676,25 @@ const TXT = {
     pedResolvidos: 'Resolvidos recentemente',
     funcionario: 'Funcionário', solicitante: 'Solicitante',
     statusPendente: 'Pendente', statusAtendido: 'Atendido', statusFabrica: 'Pedido à fábrica', statusCancelado: 'Cancelado',
+    statusRecebido: 'Recebido no escritório', statusDevolvido: 'Devolvido',
     btnAtendido: '✅ Atendido', btnFabrica: '🏭 Fábrica', btnCancelarPedido: '❌ Cancelar',
     tituloAtendido: 'Marcar como atendido (desconta do estoque)', tituloFabrica: 'Pedido à fábrica (não desconta do estoque do escritório)', tituloCancelarPedido: 'Cancelar o pedido',
-    loteRotulo: 'Todos:',
+    loteRotuloStatus: 'Todos ({s}):',
+    btnReceberEstoque: '📦 Para o estoque', tituloReceberEstoque: 'Chegou da fábrica: entra no estoque do escritório',
+    btnReceberDireto: '🚚 Direto ao funcionário', tituloReceberDireto: 'Chegou da fábrica e foi direto ao funcionário (o estoque não muda)',
+    btnDevolver: '↩️ Devolver', tituloDevolver: 'O funcionário devolveu: a quantidade volta ao estoque do escritório',
+    notaFabrica: '🏭 Enviado à fábrica: {d}',
+    notaRecebidoEstoque: '📦 Chegou: {d} → estoque do escritório',
+    notaRecebidoDireto: '🚚 Chegou: {d} → direto ao funcionário',
+    devTitulo: 'Registrar devolução',
+    devSub: 'A quantidade devolvida volta ao estoque do escritório.',
+    devLblQtd: 'Quantidade devolvida', devMax: '(máx. {n})',
+    devLblObs: 'Observação (opcional)', devPhObs: 'Ex.: ficou pequena',
+    devApenas: 'Devolver', devTroca: 'Devolver e pedir troca',
+    erroDevQtd: '⚠️ Digite um número inteiro de 1 a {n}.',
+    toastDevolvido: '✅ Devolução registrada (voltou ao estoque)',
+    toastRecebido: '✅ Recebimento registrado',
+    solDicaTroca: 'Pedido de troca: escolha o novo tamanho (ou produto) e envie.',
     confirmaSemEstoque: 'Estoque insuficiente para:\n{lista}\n\nMarcar como atendido mesmo assim?',
     linhaFalta: '{nome} {tam}: estoque {estoque} / pedido {qtd}',
     solTitulo: 'Solicitar uniformes',
@@ -648,12 +723,22 @@ const TXT = {
     relColProduto: 'Produto', relColMes: 'Mês', relColQuando: 'Data e hora', relColQuem: 'Usuário', relColTam: 'Tam.',
     relColTipo: 'Tipo', relColQtd: 'Qtd.', relColPara: 'Funcionário', relColAntes: 'Antes', relColDepois: 'Depois',
     relTotal: 'Total',
-    tipoEntrada: 'Entrada', tipoSaida: 'Saída', tipoAjuste: 'Ajuste',
+    tipoEntrada: 'Entrada manual', tipoSaida: 'Saída manual', tipoAjuste: 'Ajuste manual',
+    tipoFabrica: 'Recebido da fábrica', tipoEntrega: 'Entregue ao funcionário', tipoDevolucao: 'Devolução', tipoManual: 'Ajustes manuais (+ / − / valor exato)',
+    relPorTipo: 'Por tipo de movimento', relColMov: 'Movim.',
+    relFabricaTitulo: 'Pedidos à fábrica',
+    relFabricaResumo: 'Pedidos: {n} ({q} pç.) · aguardando {w} · recebidos no estoque {e} · direto ao funcionário {d} · cancelados {c}',
+    relFabricaVazio: 'Nenhum pedido à fábrica neste período.',
+    relFabricaErro: 'Não foi possível carregar os pedidos à fábrica.',
+    relColEnviado: 'Enviado em', relColRecebido: 'Chegou em', relColSituacao: 'Situação',
+    fabAguardando: 'Aguardando a fábrica', fabEstoque: 'Recebido → estoque do escritório', fabDireto: 'Recebido → direto ao funcionário', fabCancelado: 'Cancelado',
+    relCsvFabrica: '⬇ CSV pedidos à fábrica',
     relVazio: 'Nenhuma movimentação neste período.',
     relErro: 'Não foi possível carregar o relatório.',
-    avisoVersao: '⚠️ O Google Apps Script publicado ainda está na versão antiga. No Apps Script: Implantar > Gerenciar implantações > lápis > Versão: Nova versão > Implantar. Até lá, o relatório e o pedido com vários itens não funcionam direito.',
+    avisoVersao: '⚠️ O Google Apps Script publicado ainda está na versão antiga. No Apps Script: Implantar > Gerenciar implantações > lápis > Versão: Nova versão > Implantar. Até lá, o relatório, o pedido com vários itens e o recebimento/devolução não funcionam direito.',
     relLimite: '* Mostrando as {n} mais recentes. Exporte o CSV para ver todas.',
-    relNota: '* Só entram no relatório as movimentações feitas pelo sistema (edições direto na planilha não contam). Ajustes de valor exato são contados como entrada ou saída conforme a diferença.'
+    relNota: '* Só entram no relatório as movimentações feitas pelo sistema (edições direto na planilha não contam). Ajustes de valor exato são contados como entrada ou saída conforme a diferença.',
+    relNotaFabrica: '* Os pedidos à fábrica são contados pela data em que foram enviados à fábrica. O filtro de usuário vale só para as movimentações de estoque. O que a fábrica entrega direto ao funcionário não passa pelo estoque, então não entra nas entradas e saídas.'
   }
 };
 
@@ -733,7 +818,10 @@ let estadoPedidos = { estado:'carregando', itens:[] };
 let itensSolicitar = [];
 let enviandoPedido = false;
 let backendAntigo = false;
-const relatorio = { aberto:false, modo:'mensal', ano:0, mes:0, usuario:'todos', dados:[], carregando:false, erro:false };
+let solicitarTroca = false;       // o formulário de pedido foi aberto a partir de uma devolução
+let devolvendo = null;            // { item, funcionario } enquanto a janela de devolução está aberta
+let enviandoDevolucao = false;
+const relatorio = { aberto:false, modo:'mensal', ano:0, mes:0, usuario:'todos', dados:[], fabrica:[], fabricaErro:false, carregando:false, erro:false };
 
 /* =========================================================================
    COMUNICAÇÃO COM O GOOGLE SHEETS
@@ -806,6 +894,7 @@ function aplicarIdioma(lang){
   renderStatus();
   renderAvisoVersao();
   renderItensSolicitar();
+  renderDevolver();
   renderHistorico();
   renderPedidos();
   if(relatorio.aberto) renderRelatorio();
@@ -1134,6 +1223,11 @@ async function carregarHistorico(){
   renderHistorico();
 }
 
+// De onde veio um movimento do histórico (movimentos manuais não levam etiqueta)
+function etiquetaMotivo(motivo){
+  return { fabrica:'tipoFabrica', entrega:'tipoEntrega', devolucao:'tipoDevolucao' }[motivo] ? t({ fabrica:'tipoFabrica', entrega:'tipoEntrega', devolucao:'tipoDevolucao' }[motivo]) : '';
+}
+
 function renderHistorico(){
   const lista = $('listaHistorico');
   if(estadoHistorico.estado === 'carregando'){ lista.textContent = t('carregando'); return; }
@@ -1143,7 +1237,7 @@ function renderHistorico(){
   const acoes = { adicionar:'acaoAdicionar', retirar:'acaoRetirar', definir:'acaoDefinir' };
   lista.innerHTML = estadoHistorico.itens.map(it => {
     const acao = acoes[it.acao] ? t(acoes[it.acao]) : esc(it.acao);
-    const para = it.funcionario ? ` · 👤 ${esc(it.funcionario)}` : '';
+    const para = (it.funcionario ? ` · 👤 ${esc(it.funcionario)}` : '') + (etiquetaMotivo(it.motivo) ? ` · ${esc(etiquetaMotivo(it.motivo))}` : '');
     return `
       <div class="item-historico">
         <div><strong>${esc(it.usuario)}</strong> ${acao} — ${esc(rotuloProduto(it.produto))}, ${t('tamAbrev')} ${esc(it.tamanho)}:
@@ -1157,11 +1251,11 @@ function renderHistorico(){
    PEDIDOS DE UNIFORME (um pedido pode ter vários itens)
    ========================================================================= */
 function textoStatus(status){
-  const chaves = { 'Pendente':'statusPendente', 'Atendido':'statusAtendido', 'Pedido à fábrica':'statusFabrica', 'Cancelado':'statusCancelado' };
+  const chaves = { 'Pendente':'statusPendente', 'Atendido':'statusAtendido', 'Pedido à fábrica':'statusFabrica', 'Cancelado':'statusCancelado', 'Recebido':'statusRecebido', 'Devolvido':'statusDevolvido' };
   return chaves[status] ? t(chaves[status]) : status;
 }
 function classeStatus(status){
-  return { 'Pendente':'pendente', 'Atendido':'atendido', 'Pedido à fábrica':'fabrica', 'Cancelado':'cancelado' }[status] || '';
+  return { 'Pendente':'pendente', 'Atendido':'atendido', 'Pedido à fábrica':'fabrica', 'Cancelado':'cancelado', 'Recebido':'recebido', 'Devolvido':'devolvido' }[status] || '';
 }
 
 function novoItemSolicitar(){
@@ -1203,6 +1297,9 @@ function renderItensSolicitar(){
   });
   atualizarResumoSolicitar();
   $('solicitantePreview').textContent = t('solSolicitante', { u: obterUsuario() });
+  const dica = $('solicitarDica');
+  dica.textContent = solicitarTroca ? t('solDicaTroca') : '';
+  dica.style.display = solicitarTroca ? 'block' : 'none';
 }
 
 function atualizarResumoSolicitar(){
@@ -1217,18 +1314,28 @@ function mostrarErroSolicitar(chave){
   caixa.classList.add('visivel');
 }
 
-function abrirModalSolicitar(){
-  itensSolicitar = [novoItemSolicitar()];
-  $('inputFuncionarioSolicitar').value = '';
+// `pre` (opcional) vem de uma devolução com troca: { funcionario, item }
+function abrirModalSolicitar(pre){
+  solicitarTroca = !!pre;
+  itensSolicitar = [pre && pre.item ? Object.assign({}, pre.item) : novoItemSolicitar()];
+  $('inputFuncionarioSolicitar').value = pre ? pre.funcionario : '';
   mostrarErroSolicitar(null);
   renderItensSolicitar();
   $('modalSolicitar').classList.add('aberto');
   $('fundoEscurecido').classList.add('ativo');
 }
 
+// O fundo escuro fica enquanto qualquer painel ou janela continuar aberto
+function atualizarFundo(){
+  const aberto = ['painelHistorico', 'painelPedidos', 'modalRelatorio', 'modalSolicitar', 'modalDevolver']
+    .some(id => $(id).classList.contains('aberto'));
+  $('fundoEscurecido').classList.toggle('ativo', aberto);
+}
+
 function fecharModalSolicitar(){
   $('modalSolicitar').classList.remove('aberto');
-  $('fundoEscurecido').classList.remove('ativo');
+  solicitarTroca = false;
+  atualizarFundo();
 }
 
 function mostrarToast(chave){
@@ -1314,10 +1421,14 @@ function renderPedidos(){
   if(estadoPedidos.estado === 'erro'){ lista.textContent = t('pedErro'); return; }
 
   const pedidos = agruparPedidos(estadoPedidos.itens);
-  const abertos = pedidos.filter(p => p.itens.some(i => i.status === 'Pendente'));
-  const resolvidos = pedidos.filter(p => !p.itens.some(i => i.status === 'Pendente')).slice(0, 10);
+  // "em aberto" = ainda precisa de alguma ação (pendente, aguardando a fábrica ou recebido e não entregue)
+  const emAberto = p => p.itens.some(i => STATUS_ABERTOS.indexOf(i.status) !== -1);
+  const abertos = pedidos.filter(emAberto);
+  const resolvidos = pedidos.filter(p => !emAberto(p)).slice(0, 30);
 
-  if(abertos.length > 0){ badge.textContent = abertos.length; badge.style.display = 'inline-block'; }
+  // a bolinha vermelha conta só os pedidos que têm algo PENDENTE (a decidir agora)
+  const comPendentes = pedidos.filter(p => p.itens.some(i => i.status === 'Pendente')).length;
+  if(comPendentes > 0){ badge.textContent = comPendentes; badge.style.display = 'inline-block'; }
   else { badge.style.display = 'none'; }
 
   const rolagem = lista.scrollTop;
@@ -1335,45 +1446,101 @@ function renderPedidos(){
   lista.scrollTop = rolagem;
 }
 
-function botoesDeStatus(){
-  return `
-    <button class="btn-atendido" data-status="Atendido" title="${esc(t('tituloAtendido'))}">${esc(t('btnAtendido'))}</button>
-    <button class="btn-fabrica" data-status="Pedido à fábrica" title="${esc(t('tituloFabrica'))}">${esc(t('btnFabrica'))}</button>
-    <button class="btn-cancelar-pedido" data-status="Cancelado" title="${esc(t('tituloCancelarPedido'))}">${esc(t('btnCancelarPedido'))}</button>`;
+const STATUS_ABERTOS = ['Pendente', 'Pedido à fábrica', 'Recebido'];
+
+// Ações disponíveis para um item, conforme o status em que ele está
+function acoesDoStatus(status){
+  if(status === 'Pendente') return ['Atendido', 'Pedido à fábrica', 'Cancelado'];
+  if(status === 'Pedido à fábrica') return ['receber:estoque', 'receber:direto', 'Cancelado'];
+  if(status === 'Recebido') return ['Atendido', 'Cancelado'];
+  return []; // Atendido tem o botão de devolver; Devolvido e Cancelado já terminaram
+}
+
+// Em que status cada ação funciona (igual ao Apps Script)
+const STATUS_AFETADOS = {
+  'Atendido': ['Pendente', 'Recebido'],
+  'Pedido à fábrica': ['Pendente'],
+  'Cancelado': ['Pendente', 'Pedido à fábrica', 'Recebido'],
+  'receber:estoque': ['Pedido à fábrica'],
+  'receber:direto': ['Pedido à fábrica']
+};
+
+const BOTOES_ACAO = {
+  'Atendido':         { classe:'btn-atendido',         texto:'btnAtendido',        titulo:'tituloAtendido' },
+  'Pedido à fábrica': { classe:'btn-fabrica',          texto:'btnFabrica',         titulo:'tituloFabrica' },
+  'Cancelado':        { classe:'btn-cancelar-pedido',  texto:'btnCancelarPedido',  titulo:'tituloCancelarPedido' },
+  'receber:estoque':  { classe:'btn-receber-estoque',  texto:'btnReceberEstoque',  titulo:'tituloReceberEstoque' },
+  'receber:direto':   { classe:'btn-receber-direto',   texto:'btnReceberDireto',   titulo:'tituloReceberDireto' }
+};
+
+function botoesDeAcao(acoes){
+  return acoes.map(a => {
+    const b = BOTOES_ACAO[a];
+    return `<button class="${b.classe}" data-acao="${esc(a)}" title="${esc(t(b.titulo))}">${esc(t(b.texto))}</button>`;
+  }).join('');
+}
+
+function dataCurta(iso){
+  return iso ? new Date(iso).toLocaleDateString(loc()) : '';
+}
+
+// Linhas de informação de um item: quando foi à fábrica, quando chegou e para onde, observação
+function notasDoItem(item){
+  const notas = [];
+  if(item.fabricaEm) notas.push(t('notaFabrica', { d: dataCurta(item.fabricaEm) }));
+  if(item.recebidoEm) notas.push(t(item.destino === 'direto' ? 'notaRecebidoDireto' : 'notaRecebidoEstoque', { d: dataCurta(item.recebidoEm) }));
+  if(item.observacao) notas.push('💬 ' + item.observacao);
+  return notas;
 }
 
 function criarCartaoPedido(pedido){
-  const pendentes = pedido.itens.filter(i => i.status === 'Pendente');
   const div = document.createElement('div');
   div.className = 'pedido';
   div.dataset.pedido = pedido.pedidoId;
+
+  // Botões "todos" para cada grupo de itens (de um mesmo status) com mais de um item
+  const grupos = STATUS_ABERTOS
+    .map(s => ({ status: s, itens: pedido.itens.filter(i => i.status === s) }))
+    .filter(g => g.itens.length > 1);
+  const lotes = grupos.map(g => `
+    <div class="pedido-em-lote" data-status="${esc(g.status)}">
+      <span class="rotulo-lote">${esc(t('loteRotuloStatus', { s: textoStatus(g.status) }))}</span>${botoesDeAcao(acoesDoStatus(g.status))}
+    </div>`).join('');
 
   div.innerHTML = `
     <div class="pedido-cabecalho">
       <div class="pedido-funcionario">👤 ${esc(pedido.funcionario)}</div>
       <div class="pedido-sub">${esc(t('solicitante'))}: ${esc(pedido.solicitante)} — ${esc(dataHoraLocal(pedido.dataSolicitacao))}</div>
-      ${pendentes.length > 1 ? `<div class="pedido-em-lote"><span class="rotulo-lote">${esc(t('loteRotulo'))}</span>${botoesDeStatus()}</div>` : ''}
+      ${lotes}
     </div>`;
 
   pedido.itens.forEach(item => {
     const linha = document.createElement('div');
     linha.className = 'pedido-item';
+    const acoes = acoesDoStatus(item.status);
+    const notas = notasDoItem(item);
     linha.innerHTML = `
       <div class="pedido-item-topo">
         <div class="pedido-item-nome">${esc(rotuloProduto(item.produto, item.produtoJp))} ・ ${esc(item.tamanho)} × ${esc(item.quantidade)}</div>
         <span class="status-badge ${classeStatus(item.status)}">${esc(textoStatus(item.status))}</span>
       </div>
-      ${item.status === 'Pendente' ? `<div class="pedido-acoes">${botoesDeStatus()}</div>` : ''}`;
-    if(item.status === 'Pendente'){
-      linha.querySelectorAll('.pedido-acoes button').forEach(b => {
-        b.addEventListener('click', () => atualizarStatusPedido({ itens:[item], id:item.id }, b.dataset.status, div));
-      });
-    }
+      ${notas.length ? `<div class="pedido-item-nota">${notas.map(esc).join('<br>')}</div>` : ''}
+      ${acoes.length ? `<div class="pedido-acoes">${botoesDeAcao(acoes)}</div>` : ''}
+      ${item.status === 'Atendido' ? `<div class="pedido-acoes"><button class="btn-devolver" title="${esc(t('tituloDevolver'))}">${esc(t('btnDevolver'))}</button></div>` : ''}`;
+
+    linha.querySelectorAll('.pedido-acoes button[data-acao]').forEach(b => {
+      b.addEventListener('click', () => executarAcaoPedido(pedido, [item], b.dataset.acao, div));
+    });
+    const btnDevolver = linha.querySelector('.btn-devolver');
+    if(btnDevolver) btnDevolver.addEventListener('click', () => abrirModalDevolver(item, pedido.funcionario));
     div.appendChild(linha);
   });
 
-  div.querySelectorAll('.pedido-em-lote button').forEach(b => {
-    b.addEventListener('click', () => atualizarStatusPedido({ itens:pendentes, pedidoId:pedido.pedidoId }, b.dataset.status, div));
+  div.querySelectorAll('.pedido-em-lote').forEach(lote => {
+    const grupo = grupos.find(g => g.status === lote.dataset.status);
+    lote.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => executarAcaoPedido(pedido, grupo.itens, b.dataset.acao, div));
+    });
   });
   return div;
 }
@@ -1393,20 +1560,97 @@ function itensSemEstoque(itens){
   return faltas;
 }
 
-async function atualizarStatusPedido(alvo, novoStatus, cartao){
-  if(novoStatus === 'Atendido'){
-    const faltas = itensSemEstoque(alvo.itens);
+// Corpo do envio para o Apps Script: ref = { id } (um item) ou { pedidoId } (o pedido todo)
+function corpoAcao(acao, ref){
+  if(acao.indexOf('receber:') === 0) return Object.assign({ action:'receber', destino: acao.slice(8) }, ref);
+  return Object.assign({ action: ref.pedidoId ? 'atualizarPedido' : 'atualizarSolicitacao', novoStatus: acao }, ref);
+}
+
+// Aplica uma ação a um ou vários itens de um pedido. Se a ação atingiria exatamente
+// esses itens, manda um único comando para o pedido; senão, manda um por item
+// (para não mexer em itens de outro status do mesmo pedido).
+async function executarAcaoPedido(pedido, itens, acao, cartao){
+  if(acao === 'Atendido'){
+    const faltas = itensSemEstoque(itens);
     if(faltas.length > 0 && !window.confirm(t('confirmaSemEstoque', { lista: faltas.join('\n') }))) return;
   }
   cartao.querySelectorAll('button').forEach(b => { b.disabled = true; });
 
-  if(alvo.pedidoId) await postar({ action:'atualizarPedido', pedidoId: alvo.pedidoId, novoStatus });
-  else await postar({ action:'atualizarSolicitacao', id: alvo.id, novoStatus });
+  const afetados = pedido.itens.filter(i => STATUS_AFETADOS[acao].indexOf(i.status) !== -1);
+  if(itens.length > 1 && afetados.length === itens.length){
+    await postar(corpoAcao(acao, { pedidoId: pedido.pedidoId }));
+  }else{
+    for(const item of itens) await postar(corpoAcao(acao, { id: item.id }));
+  }
 
+  if(acao.indexOf('receber:') === 0) mostrarToast('toastRecebido');
   setTimeout(() => {
     carregarPedidos();
-    if(novoStatus === 'Atendido') carregarEstoqueAtual(true);
+    if(acao === 'Atendido' || acao === 'receber:estoque') carregarEstoqueAtual(true);
   }, 1200);
+}
+
+/* =========================================================================
+   DEVOLUÇÃO (o funcionário devolveu um item já entregue)
+   ========================================================================= */
+function abrirModalDevolver(item, funcionario){
+  devolvendo = { item, funcionario };
+  $('devQuantidade').value = item.quantidade;
+  $('devObs').value = '';
+  mostrarErroDevolver(null);
+  renderDevolver();
+  $('modalDevolver').classList.add('aberto');
+  $('fundoEscurecido').classList.add('ativo');
+  setTimeout(() => $('devQuantidade').focus(), 100);
+}
+
+function renderDevolver(){
+  if(!devolvendo) return;
+  const i = devolvendo.item;
+  $('devResumo').textContent = `👤 ${devolvendo.funcionario} — ${rotuloProduto(i.produto, i.produtoJp)} ・ ${i.tamanho} × ${i.quantidade}`;
+  $('devLblQtd').textContent = t('devLblQtd') + ' ' + t('devMax', { n: i.quantidade });
+  $('devQuantidade').max = i.quantidade;
+}
+
+function mostrarErroDevolver(chave, vars){
+  const caixa = $('erroDevolver');
+  if(!chave){ caixa.classList.remove('visivel'); caixa.textContent = ''; return; }
+  caixa.textContent = t(chave, vars);
+  caixa.classList.add('visivel');
+}
+
+function fecharModalDevolver(){
+  devolvendo = null;
+  $('modalDevolver').classList.remove('aberto');
+  atualizarFundo();
+}
+
+async function confirmarDevolucao(comTroca){
+  if(!devolvendo || enviandoDevolucao) return;
+  const maximo = devolvendo.item.quantidade;
+  const quantidade = Number($('devQuantidade').value);
+  if(!Number.isInteger(quantidade) || quantidade < 1 || quantidade > maximo){
+    mostrarErroDevolver('erroDevQtd', { n: maximo });
+    $('devQuantidade').focus();
+    return;
+  }
+  mostrarErroDevolver(null);
+  enviandoDevolucao = true;
+  const botoes = $('modalDevolver').querySelectorAll('button');
+  botoes.forEach(b => { b.disabled = true; });
+
+  const { item, funcionario } = devolvendo;
+  await postar({ action:'devolver', id: item.id, quantidade, observacao: $('devObs').value.trim() });
+
+  enviandoDevolucao = false;
+  botoes.forEach(b => { b.disabled = false; });
+  fecharModalDevolver();
+  mostrarToast('toastDevolvido');
+  setTimeout(() => { carregarPedidos(); carregarEstoqueAtual(true); }, 1200);
+
+  if(comTroca){
+    abrirModalSolicitar({ funcionario, item: { produtoId: item.produtoId, tamanho: item.tamanho, quantidade } });
+  }
 }
 
 /* =========================================================================
@@ -1443,15 +1687,23 @@ async function carregarMovimentos(){
   relatorio.erro = false;
   renderRelatorio();
   try{
-    const dados = await buscarJson('movimentos', '&ano=' + ano);
+    // os pedidos à fábrica vêm junto; se só eles falharem, o resto do relatório continua aparecendo
+    const [dados, fabrica] = await Promise.all([
+      buscarJson('movimentos', '&ano=' + ano),
+      buscarJson('fabrica', '&ano=' + ano).catch(erro => { console.error(erro); return null; })
+    ]);
     // um Apps Script antigo devolve a lista do estoque no lugar dos movimentos
     if(dados.some(m => typeof m.delta !== 'number' || typeof m.mes !== 'number')) throw new Error('resposta de versão antiga');
     if(ano !== relatorio.ano) return; // a pessoa já trocou de ano: ignora esta resposta
     relatorio.dados = dados;
+    const fabricaValida = Array.isArray(fabrica) && !fabrica.some(f => typeof f.mes !== 'number' || !f.status);
+    relatorio.fabrica = fabricaValida ? fabrica : [];
+    relatorio.fabricaErro = !fabricaValida;
   }catch(erro){
     console.error(erro);
     if(ano !== relatorio.ano) return;
     relatorio.dados = [];
+    relatorio.fabrica = [];
     relatorio.erro = true;
   }
   relatorio.carregando = false;
@@ -1501,9 +1753,63 @@ function formatarDataHoraRelatorio(texto){
   return idioma === 'ja' ? `${m[1]}/${m[2]}/${m[3]} ${m[4]}:${m[5]}` : `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}`;
 }
 
+// Tipo de um movimento: de onde veio (fábrica, entrega, devolução) ou ajuste manual
+function chaveTipo(m){
+  return (m.motivo === 'fabrica' || m.motivo === 'entrega' || m.motivo === 'devolucao') ? m.motivo : 'manual';
+}
 function rotuloTipo(m){
+  if(m.motivo === 'fabrica') return t('tipoFabrica');
+  if(m.motivo === 'entrega') return t('tipoEntrega');
+  if(m.motivo === 'devolucao') return t('tipoDevolucao');
   if(m.acao === 'definir') return t('tipoAjuste');
   return m.delta > 0 ? t('tipoEntrada') : t('tipoSaida');
+}
+
+function resumirPorTipo(lista){
+  const grupos = { fabrica:{ entradas:0, saidas:0, n:0 }, entrega:{ entradas:0, saidas:0, n:0 }, devolucao:{ entradas:0, saidas:0, n:0 }, manual:{ entradas:0, saidas:0, n:0 } };
+  lista.forEach(m => {
+    const g = grupos[chaveTipo(m)];
+    g.n++;
+    if(m.delta > 0) g.entradas += m.delta; else g.saidas += -m.delta;
+  });
+  return grupos;
+}
+
+// ---- pedidos à fábrica ----
+function situacaoFabrica(f){
+  if(f.recebidoEm) return f.destino === 'direto' ? 'direto' : 'estoque';
+  if(f.status === 'Cancelado') return 'cancelado';
+  return 'aguardando';
+}
+const SITUACOES_FABRICA = {
+  aguardando: { classe:'pendente',  chave:'fabAguardando' },
+  estoque:    { classe:'recebido',  chave:'fabEstoque' },
+  direto:     { classe:'fabrica',   chave:'fabDireto' },
+  cancelado:  { classe:'cancelado', chave:'fabCancelado' }
+};
+function fabricaFiltrada(){
+  return relatorio.fabrica
+    .filter(f => relatorio.modo === 'anual' || f.mes === relatorio.mes)
+    .sort((a, b) => a.dataHora < b.dataHora ? 1 : a.dataHora > b.dataHora ? -1 : 0);
+}
+
+function htmlFabrica(){
+  let html = `<div class="rel-secao">🏭 ${esc(t('relFabricaTitulo'))}</div>`;
+  if(relatorio.fabricaErro) return html + `<div class="rel-vazio">${esc(t('relFabricaErro'))}</div>`;
+  const lista = fabricaFiltrada();
+  if(lista.length === 0) return html + `<div class="rel-vazio">${esc(t('relFabricaVazio'))}</div>`;
+
+  const c = { aguardando:0, estoque:0, direto:0, cancelado:0 };
+  let pecas = 0;
+  lista.forEach(f => { c[situacaoFabrica(f)]++; pecas += f.quantidade; });
+  html += `<p class="rel-fab-resumo">${esc(t('relFabricaResumo', { n: lista.length, q: pecas, w: c.aguardando, e: c.estoque, d: c.direto, c: c.cancelado }))}</p>`;
+  html += `<div class="rel-rolagem"><table class="rel-tabela">
+    <thead><tr><th>${esc(t('relColEnviado'))}</th><th>${esc(t('relColPara'))}</th><th>${esc(t('relColProduto'))}</th><th>${esc(t('relColTam'))}</th><th class="num">${esc(t('relColQtd'))}</th><th>${esc(t('relColSituacao'))}</th><th>${esc(t('relColRecebido'))}</th></tr></thead><tbody>`;
+  lista.forEach(f => {
+    const sit = SITUACOES_FABRICA[situacaoFabrica(f)];
+    html += `<tr><td>${esc(formatarDataHoraRelatorio(f.dataHora))}</td><td>${f.funcionario ? '👤 ' + esc(f.funcionario) : '—'}</td><td>${esc(rotuloProduto(f.produto, f.produtoJp))}</td><td>${esc(f.tamanho)}</td><td class="num">${esc(f.quantidade)}</td><td><span class="status-badge ${sit.classe}">${esc(t(sit.chave))}</span></td><td>${f.recebidoEm ? esc(formatarDataHoraRelatorio(f.recebidoEm)) : '—'}</td></tr>`;
+  });
+  return html + `</tbody></table></div>`;
 }
 
 function renderRelatorio(){
@@ -1558,6 +1864,16 @@ function renderRelatorio(){
   if(resumo.total === 0){
     html += `<div class="rel-vazio">${esc(t('relVazio'))}</div>`;
   }else{
+    const porTipo = resumirPorTipo(periodo);
+    html += `<div class="rel-secao">${esc(t('relPorTipo'))}</div><div class="rel-rolagem"><table class="rel-tabela">
+      <thead><tr><th>${esc(t('relColTipo'))}</th><th class="num">${esc(t('relEntradas'))}</th><th class="num">${esc(t('relSaidas'))}</th><th class="num">${esc(t('relColMov'))}</th></tr></thead><tbody>`;
+    [['fabrica', 'tipoFabrica'], ['entrega', 'tipoEntrega'], ['devolucao', 'tipoDevolucao'], ['manual', 'tipoManual']].forEach(par => {
+      const g = porTipo[par[0]];
+      if(g.n === 0) return;
+      html += `<tr><td>${esc(t(par[1]))}</td><td class="num pos">${g.entradas ? '+' + g.entradas : '0'}</td><td class="num neg">${g.saidas ? '−' + g.saidas : '0'}</td><td class="num">${g.n}</td></tr>`;
+    });
+    html += `</tbody></table></div>`;
+
     html += `<div class="rel-secao">${esc(t('relPorProduto'))}</div><div class="rel-rolagem"><table class="rel-tabela">
       <thead><tr><th>${esc(t('relColProduto'))}</th><th class="num">${esc(t('relEntradas'))}</th><th class="num">${esc(t('relSaidas'))}</th><th class="num">${esc(t('relSaldo'))}</th></tr></thead><tbody>`;
     resumo.produtos.forEach(p => {
@@ -1581,7 +1897,8 @@ function renderRelatorio(){
     if(detalhe.length > mostrados.length) html += `<p class="rel-nota">${esc(t('relLimite', { n: mostrados.length }))}</p>`;
   }
 
-  html += `<p class="rel-nota">${esc(t('relNota'))}</p>`;
+  html += htmlFabrica();
+  html += `<p class="rel-nota">${esc(t('relNota'))}</p><p class="rel-nota" style="margin-top:4px;">${esc(t('relNotaFabrica'))}</p>`;
   corpo.innerHTML = html;
 }
 
@@ -1605,13 +1922,25 @@ function montarCsv(lista){
   });
   return '﻿' + linhas.join('\r\n');
 }
-function exportarCsv(){
-  const lista = movimentosFiltrados(true);
-  const blob = new Blob([montarCsv(lista)], { type:'text/csv;charset=utf-8' });
+function montarCsvFabrica(lista){
+  const cabecalho = [t('relColEnviado'), t('relColPara'), t('solicitante'), t('relColProduto'), 'ProdutoJP', t('relColTam'), t('relColQtd'), t('relColSituacao'), t('relColRecebido')];
+  const linhas = [cabecalho.map(c => celulaCsv(c)).join(',')];
+  lista.forEach(f => {
+    const jp = produtoPorNomePt[f.produto] ? produtoPorNomePt[f.produto].nomeJp : (f.produtoJp || '');
+    linhas.push([
+      celulaCsv(f.dataHora), celulaCsv(f.funcionario, true), celulaCsv(f.solicitante, true),
+      celulaCsv(f.produto, true), celulaCsv(jp, true), celulaCsv(f.tamanho, true), celulaCsv(f.quantidade),
+      celulaCsv(t(SITUACOES_FABRICA[situacaoFabrica(f)].chave)), celulaCsv(f.recebidoEm)
+    ].join(','));
+  });
+  return '﻿' + linhas.join('\r\n');
+}
+function exportarCsv(fabrica){
+  const blob = new Blob([fabrica === true ? montarCsvFabrica(fabricaFiltrada()) : montarCsv(movimentosFiltrados(true))], { type:'text/csv;charset=utf-8' });
   const periodo = relatorio.modo === 'mensal' ? relatorio.ano + '-' + String(relatorio.mes).padStart(2, '0') : String(relatorio.ano);
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = 'estoque-movimentos-' + periodo + '.csv';
+  link.download = (fabrica === true ? 'estoque-fabrica-' : 'estoque-movimentos-') + periodo + '.csv';
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -1627,6 +1956,9 @@ function fecharTudo(){
   if(relatorio.aberto) relatorio.aberto = false;
   $('modalRelatorio').classList.remove('aberto');
   $('modalSolicitar').classList.remove('aberto');
+  $('modalDevolver').classList.remove('aberto');
+  devolvendo = null;
+  solicitarTroca = false;
   $('fundoEscurecido').classList.remove('ativo');
 }
 
@@ -1673,7 +2005,7 @@ function iniciar(){
   $('fecharHistorico').addEventListener('click', fecharTudo);
 
   // pedido com vários itens
-  $('btnSolicitar').addEventListener('click', abrirModalSolicitar);
+  $('btnSolicitar').addEventListener('click', () => abrirModalSolicitar());
   $('btnCancelarSolicitar').addEventListener('click', fecharModalSolicitar);
   $('btnEnviarSolicitar').addEventListener('click', enviarSolicitacao);
   $('btnAdicionarItem').addEventListener('click', () => {
@@ -1695,17 +2027,24 @@ function iniciar(){
   $('relAno').addEventListener('change', e => { relatorio.ano = parseInt(e.target.value, 10); carregarMovimentos(); });
   $('relMes').addEventListener('change', e => { relatorio.mes = parseInt(e.target.value, 10); renderRelatorio(); });
   $('relUsuario').addEventListener('change', e => { relatorio.usuario = e.target.value; renderRelatorio(); });
-  $('btnCsv').addEventListener('click', exportarCsv);
+  $('btnCsv').addEventListener('click', () => exportarCsv(false));
+  $('btnCsvFabrica').addEventListener('click', () => exportarCsv(true));
+
+  // devolução
+  $('btnCancelarDevolver').addEventListener('click', fecharModalDevolver);
+  $('btnDevolverApenas').addEventListener('click', () => confirmarDevolucao(false));
+  $('btnDevolverTroca').addEventListener('click', () => confirmarDevolucao(true));
 
   // clicar fora fecha os painéis, mas NÃO o pedido em preenchimento (para não perder a lista digitada)
   $('fundoEscurecido').addEventListener('click', () => {
-    if($('modalSolicitar').classList.contains('aberto')) return;
+    if($('modalSolicitar').classList.contains('aberto') || $('modalDevolver').classList.contains('aberto')) return;
     fecharTudo();
   });
   document.addEventListener('keydown', e => {
     if(e.key !== 'Escape') return;
     if($('modalNome').classList.contains('aberto') && $('btnCancelarNome').style.display === 'none') return;
     if($('modalNome').classList.contains('aberto')) { fecharModalNome(); return; }
+    if($('modalDevolver').classList.contains('aberto')) { fecharModalDevolver(); return; }
     if($('modalSolicitar').classList.contains('aberto')) { fecharModalSolicitar(); return; }
     fecharTudo();
   });
